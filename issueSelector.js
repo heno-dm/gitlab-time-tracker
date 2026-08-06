@@ -24,8 +24,16 @@ class IssueSelectorDialog extends ModalDialog.ModalDialog {
         this._projects = [];
         this._allIssues = [];
         this._selectedProject = null;
+        this._issuePage = 1;
+        this._issuePerPage = 100;
+        this._issueHasMore = false;
+        this._issueLoading = false;
+        this._issueRequestSerial = 0;
+        this._issueReloadId = null;
+        this._currentUser = null;
 
         this._buildUI();
+        this._loadCurrentUser();
         this._loadProjects();
     }
 
@@ -110,17 +118,63 @@ class IssueSelectorDialog extends ModalDialog.ModalDialog {
         });
         issueBox.add_child(issueLabel);
 
-        // Issue search
+        // Issue filters are sent to GitLab; do not filter locally because large projects may exceed one page.
         this._issueSearchEntry = new St.Entry({
-            hint_text: this._('Search issue...'),
+            hint_text: this._('Search issues on GitLab...'),
             can_focus: true,
             track_hover: true,
             style: 'margin-bottom: 5px;'
         });
+        this._issueSearchEntry.set_text(this._settings.get_string('issue-filter-search'));
         this._issueSearchEntry.clutter_text.connect('text-changed', () => {
-            this._updateIssueList();
+            this._settings.set_string('issue-filter-search', this._issueSearchEntry.get_text());
+            this._scheduleIssueReload();
         });
         issueBox.add_child(this._issueSearchEntry);
+
+        let filterBox = new St.BoxLayout({
+            vertical: false,
+            style: 'margin-bottom: 5px; spacing: 8px;'
+        });
+
+        this._issueStateButton = new St.Button({
+            style_class: 'popup-menu-item',
+            can_focus: true,
+            track_hover: true,
+            style: 'padding: 6px 10px;'
+        });
+        this._issueStateLabel = new St.Label({ text: this._stateLabel(this._getIssueState()) });
+        this._issueStateButton.set_child(this._issueStateLabel);
+        this._issueStateButton.connect('clicked', () => this._cycleIssueState());
+        filterBox.add_child(this._issueStateButton);
+
+        this._issueAssigneeEntry = new St.Entry({
+            hint_text: this._('Assignee: username, me, or None'),
+            can_focus: true,
+            track_hover: true,
+            x_expand: true
+        });
+        this._issueAssigneeEntry.set_text(this._settings.get_string('issue-filter-assignee'));
+        this._issueAssigneeEntry.clutter_text.connect('text-changed', () => {
+            this._settings.set_string('issue-filter-assignee', this._issueAssigneeEntry.get_text().trim());
+            this._scheduleIssueReload();
+        });
+        filterBox.add_child(this._issueAssigneeEntry);
+
+        this._issueLabelsEntry = new St.Entry({
+            hint_text: this._('Labels, comma-separated'),
+            can_focus: true,
+            track_hover: true,
+            x_expand: true
+        });
+        this._issueLabelsEntry.set_text(this._settings.get_string('issue-filter-labels'));
+        this._issueLabelsEntry.clutter_text.connect('text-changed', () => {
+            this._settings.set_string('issue-filter-labels', this._issueLabelsEntry.get_text().trim());
+            this._scheduleIssueReload();
+        });
+        filterBox.add_child(this._issueLabelsEntry);
+
+        issueBox.add_child(filterBox);
 
         // Issue list container with overlay support
         let issueContainer = new St.Widget({
@@ -149,6 +203,18 @@ class IssueSelectorDialog extends ModalDialog.ModalDialog {
 
         issueBox.add_child(issueContainer);
 
+        this._loadMoreButton = new St.Button({
+            label: this._('Load more issues'),
+            style_class: 'popup-menu-item',
+            can_focus: true,
+            track_hover: true,
+            x_expand: true,
+            style: 'margin-top: 5px; padding: 8px;'
+        });
+        this._loadMoreButton.connect('clicked', () => this._loadMoreIssues());
+        this._loadMoreButton.hide();
+        issueBox.add_child(this._loadMoreButton);
+
         content.add_child(issueBox);
 
         this.contentLayout.add_child(content);
@@ -171,8 +237,9 @@ class IssueSelectorDialog extends ModalDialog.ModalDialog {
         this._selectedIssueWidget = null;
     }
 
-    _apiGet(path, overlay, loadingText, onSuccess) {
-        this._showOverlay(overlay, loadingText);
+    _apiGet(path, overlay, loadingText, onSuccess, onError = null) {
+        if (overlay)
+            this._showOverlay(overlay, loadingText);
 
         const url = this._settings.get_string('gitlab-url');
         const token = this._settings.get_string('gitlab-token');
@@ -192,17 +259,35 @@ class IssueSelectorDialog extends ModalDialog.ModalDialog {
 
                     if (message.status_code === 200) {
                         onSuccess(JSON.parse(response));
-                        this._hideOverlay(overlay);
+                        if (overlay)
+                            this._hideOverlay(overlay);
                     } else if (message.status_code === 401 || message.status_code === 403) {
-                        this._showOverlay(overlay, this._('Please configure the server URL and token in preferences'));
+                        if (overlay)
+                            this._showOverlay(overlay, this._('Please configure the server URL and token in preferences'));
+                        if (onError)
+                            onError(message.status_code);
                     } else {
-                        this._showOverlay(overlay, `${this._('Error')}: ${message.status_code}`);
+                        if (overlay)
+                            this._showOverlay(overlay, `${this._('Error')}: ${message.status_code}`);
+                        if (onError)
+                            onError(message.status_code);
                     }
                 } catch (e) {
-                    this._showOverlay(overlay, `${this._('Error')}: ${e.message}`);
+                    if (overlay)
+                        this._showOverlay(overlay, `${this._('Error')}: ${e.message}`);
+                    if (onError)
+                        onError(e);
                 }
             }
         );
+    }
+
+    _loadCurrentUser() {
+        this._apiGet('/user', null, '', (data) => {
+            this._currentUser = data;
+            if (this._selectedProject && this._settings.get_string('issue-filter-assignee').trim().toLowerCase() === 'me')
+                this._reloadIssues();
+        });
     }
 
     _loadProjects() {
@@ -306,15 +391,67 @@ class IssueSelectorDialog extends ModalDialog.ModalDialog {
     }
 
     _loadIssues(projectId) {
+        this._issuePage = 1;
+        this._issueHasMore = false;
+        this._allIssues = [];
+        this._selectedIssue = null;
+        this._selectedIssueWidget = null;
+        this._updateIssueList();
+        this._loadIssuesPage(projectId, 1, false);
+    }
+
+    _reloadIssues() {
+        if (!this._selectedProject)
+            return;
+
+        this._issuePage = 1;
+        this._allIssues = [];
+        this._selectedIssueWidget = null;
+        this._updateIssueList();
+        this._loadIssuesPage(this._selectedProject.id, 1, false);
+    }
+
+    _scheduleIssueReload() {
+        if (this._issueReloadId) {
+            GLib.source_remove(this._issueReloadId);
+            this._issueReloadId = null;
+        }
+
+        this._issueReloadId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 300, () => {
+            this._issueReloadId = null;
+            this._reloadIssues();
+            return GLib.SOURCE_REMOVE;
+        });
+    }
+
+    _loadMoreIssues() {
+        if (!this._selectedProject || this._issueLoading || !this._issueHasMore)
+            return;
+
+        this._loadIssuesPage(this._selectedProject.id, this._issuePage + 1, true);
+    }
+
+    _loadIssuesPage(projectId, page, append) {
+        const requestSerial = ++this._issueRequestSerial;
+        this._issueLoading = true;
+        this._loadMoreButton.hide();
+
+        const query = this._buildIssueQuery(page);
         this._apiGet(
-            `/projects/${projectId}/issues?state=opened&per_page=100`,
+            `/projects/${projectId}/issues?${query}`,
             this._issueLoadingOverlay,
             this._('Loading issues...'),
             (data) => {
-                this._allIssues = data;
+                if (requestSerial !== this._issueRequestSerial)
+                    return;
+
+                this._issueLoading = false;
+                this._issuePage = page;
+                this._issueHasMore = data.length === this._issuePerPage;
+                this._allIssues = append ? this._allIssues.concat(data) : data;
                 this._updateIssueList();
 
-                // Auto-select preselected issue
+                // Auto-select preselected issue when it is present in the server-filtered result.
                 if (this._preselectedIssue) {
                     const index = this._allIssues.findIndex(i => i.iid === this._preselectedIssue.iid);
                     if (index >= 0) {
@@ -323,24 +460,81 @@ class IssueSelectorDialog extends ModalDialog.ModalDialog {
                             this._selectIssue(this._allIssues[index], widgets[index]);
                     }
                 }
+            },
+            () => {
+                if (requestSerial !== this._issueRequestSerial)
+                    return;
+
+                this._issueLoading = false;
+                this._updateIssueList();
             }
         );
+    }
+
+    _buildIssueQuery(page) {
+        const params = [
+            ['state', this._getIssueState()],
+            ['per_page', String(this._issuePerPage)],
+            ['page', String(page)],
+        ];
+
+        const search = this._settings.get_string('issue-filter-search').trim();
+        if (search) {
+            params.push(['search', search]);
+            params.push(['in', 'title,description']);
+        }
+
+        const assignee = this._settings.get_string('issue-filter-assignee').trim();
+        if (assignee) {
+            const normalized = assignee.toLowerCase();
+            if (normalized === 'none' || normalized === 'unassigned') {
+                params.push(['assignee_id', 'None']);
+            } else if (normalized === 'me') {
+                if (this._currentUser?.username)
+                    params.push(['assignee_username', this._currentUser.username]);
+            } else {
+                params.push(['assignee_username', assignee.replace(/^@/, '')]);
+            }
+        }
+
+        const labels = this._settings.get_string('issue-filter-labels').trim();
+        if (labels)
+            params.push(['labels', labels]);
+
+        return params
+            .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+            .join('&');
+    }
+
+    _getIssueState() {
+        const state = this._settings.get_string('issue-filter-state');
+        return ['opened', 'closed', 'all'].includes(state) ? state : 'opened';
+    }
+
+    _cycleIssueState() {
+        const states = ['opened', 'closed', 'all'];
+        const nextState = states[(states.indexOf(this._getIssueState()) + 1) % states.length];
+        this._settings.set_string('issue-filter-state', nextState);
+        this._issueStateLabel.text = this._stateLabel(nextState);
+        this._reloadIssues();
+    }
+
+    _stateLabel(state) {
+        switch (state) {
+        case 'closed':
+            return this._('Closed issues');
+        case 'all':
+            return this._('All issues');
+        default:
+            return this._('Open issues');
+        }
     }
 
     _updateIssueList() {
         this._selectedIssueWidget = null;
         this._issueList.destroy_all_children();
 
-        const searchText = this._issueSearchEntry.get_text().toLowerCase();
-        const searchWords = searchText.split(/\s+/).filter(w => w.length > 0);
-        const filteredIssues = searchWords.length > 0
-            ? this._allIssues.filter(i => {
-                const haystack = `#${i.iid} ${i.title}`.toLowerCase();
-                return searchWords.every(word => haystack.includes(word));
-            })
-            : this._allIssues;
-
-        for (let issue of filteredIssues) {
+        for (let issue of this._allIssues) {
             let item = new St.Button({
                 style_class: 'popup-menu-item',
                 can_focus: true,
@@ -363,13 +557,18 @@ class IssueSelectorDialog extends ModalDialog.ModalDialog {
             this._issueList.add_child(item);
         }
 
-        if (filteredIssues.length === 0) {
+        if (this._allIssues.length === 0 && !this._issueLoading) {
             let emptyLabel = new St.Label({
                 text: this._('No issues found'),
                 style_class: 'gitlab-empty-label'
             });
             this._issueList.add_child(emptyLabel);
         }
+
+        if (this._issueHasMore && !this._issueLoading)
+            this._loadMoreButton.show();
+        else
+            this._loadMoreButton.hide();
     }
 
     _selectIssue(issue, widget) {
@@ -458,6 +657,10 @@ class IssueSelectorDialog extends ModalDialog.ModalDialog {
     }
 
     destroy() {
+        if (this._issueReloadId) {
+            GLib.source_remove(this._issueReloadId);
+            this._issueReloadId = null;
+        }
         this._hideOverlay(this._projectLoadingOverlay);
         this._hideOverlay(this._issueLoadingOverlay);
         this._httpSession.abort();

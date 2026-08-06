@@ -31,5 +31,50 @@
       <summary>Count elapsed time when locked</summary>
       <description>When enabled (and resume-on-unlock is enabled), the elapsed time during lock/logout/shutdown will be counted</description>
     </key>
+    <key name="toggle-timer-shortcut" type="as">
+      <default>['&lt;Super&gt;&lt;Alt&gt;t']</default>
+      <summary>Toggle timer shortcut</summary>
+      <description>Keyboard shortcut to start, pause, resume, or select an issue for the timer</description>
+    </key>
+    <key name="stop-send-shortcut" type="as">
+      <default>['&lt;Super&gt;&lt;Alt&gt;s']</default>
+      <summary>Stop and send shortcut</summary>
+      <description>Keyboard shortcut to stop the timer and send tracked time to GitLab</description>
+    </key>
+    <key name="cancel-timer-shortcut" type="as">
+      <default>['&lt;Super&gt;&lt;Alt&gt;c']</default>
+      <summary>Cancel timer shortcut</summary>
+      <description>Keyboard shortcut to cancel the current timer without sending time</description>
+    </key>
+    <key name="select-issue-shortcut" type="as">
+      <default>['&lt;Super&gt;&lt;Alt&gt;i']</default>
+      <summary>Select issue shortcut</summary>
+      <description>Keyboard shortcut to open the project and issue selector</description>
+    </key>
+    <key name="monthly-report-shortcut" type="as">
+      <default>['&lt;Super&gt;&lt;Alt&gt;r']</default>
+      <summary>Monthly report shortcut</summary>
+      <description>Keyboard shortcut to open the monthly report dialog</description>
+    </key>
+    <key name="issue-filter-search" type="s">
+      <default>''</default>
+      <summary>Issue search filter</summary>
+      <description>Search text used when loading issues from GitLab</description>
+    </key>
+    <key name="issue-filter-state" type="s">
+      <default>'opened'</default>
+      <summary>Issue state filter</summary>
+      <description>Issue state used when loading issues from GitLab</description>
+    </key>
+    <key name="issue-filter-assignee" type="s">
+      <default>''</default>
+      <summary>Issue assignee filter</summary>
+      <description>Assignee username, me, or None used when loading issues from GitLab</description>
+    </key>
+    <key name="issue-filter-labels" type="s">
+      <default>''</default>
+      <summary>Issue labels filter</summary>
+      <description>Comma-separated labels used when loading issues from GitLab</description>
+    </key>
   </schema>
 </schemalist>

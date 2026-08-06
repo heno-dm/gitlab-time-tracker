@@ -1,0 +1,8 @@
+{
+  "name": "GitLab Time Tracker",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "postCreateCommand": "make build",
+  "remoteUser": "vscode"
+}

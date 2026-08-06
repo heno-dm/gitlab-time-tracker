@@ -12,8 +12,9 @@ A GNOME Shell extension for tracking time spent on GitLab issues directly from y
 ## Features
 
 - **System Tray Integration**: Quick access timer in your GNOME top bar
-- **Project & Issue Selection**: Browse and search your GitLab projects and issues
+- **Project & Issue Selection**: Browse projects and filter issues through GitLab server-side search
 - **Timer Controls**: Start, pause, resume, and cancel time tracking
+- **Keyboard Shortcuts**: Configurable shortcuts for timer and dialog actions
 - **Automatic Time Submission**: Send tracked time directly to GitLab issues
 - **Monthly Reports**: Generate detailed time reports by project and tag
 - **Quick Links**: Open projects and issues directly in your browser
@@ -31,7 +32,8 @@ The extension adds a timer icon to your system tray that changes based on the ti
 ### Project & Issue Selector
 Browse and search your GitLab projects and issues with a clean, intuitive interface:
 - Alphabetically sorted project list
-- Real-time search filtering
+- Server-side issue filtering for large projects
+- Persistent issue filters for search text, state, assignee, and labels
 - Project avatars with fallback to group/user avatars
 
 ## Installation
@@ -58,6 +60,7 @@ Clone this repository:
    - **Personal Access Token**: Generate a token with `api` scope from your GitLab settings
 4. (Optional) Configure report filters:
    - **Tags included in reports**: Filter reports by specific labels (comma-separated list or regex patterns)
+5. (Optional) Configure keyboard shortcuts in the **Keyboard Shortcuts** section.
 
 ### Creating a GitLab Personal Access Token
 
@@ -75,9 +78,21 @@ Clone this repository:
 1. Click the timer icon in the system tray
 2. Select **Select project & issue**
 3. Search and select your project
-4. Search and select the issue you're working on
+4. Filter issues by search text, state, assignee, or labels
 5. Click **Select**
 6. Click **Start** to begin tracking time
+
+### Issue Filters
+
+Issue filtering is done by GitLab instead of locally, so projects with thousands of issues can be searched without loading every issue first.
+
+- **Search**: Searches GitLab issues by title and description
+- **State**: Cycles between open, closed, and all issues
+- **Assignee**: Leave empty for any assignee, use `None` or `unassigned` for unassigned issues, `me` for your GitLab user, or a GitLab username
+- **Labels**: Comma-separated GitLab labels, for example `bug,frontend`
+- **Load more issues**: Fetches the next page when more than 100 matching issues exist
+
+Filters persist across issue selector openings.
 
 ### Timer Controls
 
@@ -85,6 +100,16 @@ Clone this repository:
 - **Pause/Resume**: Pause or resume the timer without losing progress
 - **Stop & Send**: Stop the timer and send the tracked time to GitLab
 - **Cancel**: Cancel the timer without sending time
+
+### Keyboard Shortcuts
+
+Default shortcuts can be changed or disabled in Settings:
+
+- `<Super><Alt>t`: Start, pause, or resume the timer; opens issue selection if no issue is selected
+- `<Super><Alt>s`: Stop and send tracked time
+- `<Super><Alt>c`: Cancel the timer
+- `<Super><Alt>i`: Open project and issue selection
+- `<Super><Alt>r`: Open the monthly report
 
 ### Time Format
 
@@ -198,6 +223,12 @@ The extension automatically detects your system language and displays in:
 4. Check the browser console for API errors
 
 ## Development
+
+### Development Container
+
+Open the repository in a Dev Container-compatible editor and select **Reopen in Container**. The container installs the GNOME extension packaging, GSettings schema, and gettext tools, then runs `make build` when it is created.
+
+The container supports building the extension package. Run `make install`, `make test-shell`, and `make test-prefs` on the Ubuntu GNOME host because those targets interact with the user's GNOME Shell session.
 
 ### Building from Source
 

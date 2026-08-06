@@ -2,6 +2,8 @@ import GObject from 'gi://GObject';
 import St from 'gi://St';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
+import Meta from 'gi://Meta';
+import Shell from 'gi://Shell';
 import Soup from 'gi://Soup';
 
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
@@ -278,6 +280,26 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
         Main.notify(this._('GitLab Issues Timer'), this._('Timer cancelled'));
     }
 
+    _toggleTimerFromShortcut() {
+        if (!this._selectedProject || !this._selectedIssue) {
+            this._openIssueSelector();
+        } else if (!this._timerRunning) {
+            this._startTimer();
+        } else {
+            this._pauseTimer();
+        }
+    }
+
+    _stopTimerFromShortcut() {
+        if (this._timerRunning)
+            this._stopTimer();
+    }
+
+    _cancelTimerFromShortcut() {
+        if (this._timerRunning)
+            this._cancelTimer();
+    }
+
     _resetTimer() {
         if (this._timerId) {
             GLib.source_remove(this._timerId);
@@ -534,12 +556,37 @@ export default class GitLabIssuesExtension extends Extension {
     enable() {
         this._indicator = new GitLabIssuesIndicator(this);
         Main.panel.addToStatusArea(this.uuid, this._indicator);
+        this._settings = this.getSettings();
+        this._keybindings = [
+            ['toggle-timer-shortcut', () => this._indicator?._toggleTimerFromShortcut()],
+            ['stop-send-shortcut', () => this._indicator?._stopTimerFromShortcut()],
+            ['cancel-timer-shortcut', () => this._indicator?._cancelTimerFromShortcut()],
+            ['select-issue-shortcut', () => this._indicator?._openIssueSelector()],
+            ['monthly-report-shortcut', () => this._indicator?._openReport()],
+        ];
+
+        for (const [name, callback] of this._keybindings) {
+            Main.wm.addKeybinding(
+                name,
+                this._settings,
+                Meta.KeyBindingFlags.NONE,
+                Shell.ActionMode.NORMAL,
+                callback
+            );
+        }
     }
 
     disable() {
+        if (this._keybindings) {
+            for (const [name] of this._keybindings)
+                Main.wm.removeKeybinding(name);
+            this._keybindings = null;
+        }
+
         if (this._indicator) {
             this._indicator.destroy();
             this._indicator = null;
         }
+        this._settings = null;
     }
 }

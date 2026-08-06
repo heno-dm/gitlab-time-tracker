@@ -73,6 +73,19 @@ export default class GitLabIssuesPreferences extends ExtensionPreferences {
             settings.set_boolean('count-time-when-locked', widget.get_active());
         });
 
+        // Keyboard shortcuts configuration group
+        const shortcutsGroup = new Adw.PreferencesGroup({
+            title: _('Keyboard Shortcuts'),
+            description: _('Use accelerator syntax such as <Super><Alt>t. Leave empty to disable a shortcut.'),
+        });
+        page.add(shortcutsGroup);
+
+        this._addShortcutRow(shortcutsGroup, settings, 'toggle-timer-shortcut', _('Start, pause, or resume timer'));
+        this._addShortcutRow(shortcutsGroup, settings, 'stop-send-shortcut', _('Stop and send time'));
+        this._addShortcutRow(shortcutsGroup, settings, 'cancel-timer-shortcut', _('Cancel timer'));
+        this._addShortcutRow(shortcutsGroup, settings, 'select-issue-shortcut', _('Select project and issue'));
+        this._addShortcutRow(shortcutsGroup, settings, 'monthly-report-shortcut', _('Open monthly report'));
+
         // Reports configuration group
         const reportsGroup = new Adw.PreferencesGroup({
             title: _('Reports Configuration'),
@@ -128,5 +141,42 @@ export default class GitLabIssuesPreferences extends ExtensionPreferences {
         const infoRow = new Adw.ActionRow();
         infoRow.set_child(infoLabel);
         infoGroup.add(infoRow);
+    }
+
+    _addShortcutRow(group, settings, key, title) {
+        const row = new Adw.EntryRow({ title });
+        const shortcuts = settings.get_strv(key);
+        row.set_text(shortcuts.length > 0 ? shortcuts[0] : '');
+        row.connect('changed', (widget) => {
+            const value = widget.get_text().trim();
+            if (value === '') {
+                settings.set_strv(key, []);
+            } else if (this._isValidShortcut(value)) {
+                settings.set_strv(key, [value]);
+            }
+        });
+        group.add(row);
+    }
+
+    _isValidShortcut(shortcut) {
+        try {
+            const parsed = Gtk.accelerator_parse(shortcut);
+            let keyval;
+            let modifiers;
+
+            if (parsed.length === 3) {
+                if (!parsed[0])
+                    return false;
+                keyval = parsed[1];
+                modifiers = parsed[2];
+            } else {
+                keyval = parsed[0];
+                modifiers = parsed[1];
+            }
+
+            return keyval !== 0 && Gtk.accelerator_valid(keyval, modifiers);
+        } catch (e) {
+            return false;
+        }
     }
 }

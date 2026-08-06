@@ -24,7 +24,7 @@ build: clean
 	
 	# Compile GSettings schema
 	@echo "Compiling GSettings schema..."
-	if [ -d "schemas" ]; then \
+	set -e; if [ -d "schemas" ]; then \
 	    glib-compile-schemas schemas/; \
 	    echo "✓ Schema compiled successfully"; \
 	else \
@@ -33,10 +33,10 @@ build: clean
 	
 	# Compile translations
 	@echo "Compiling translations..."
-	if [ -d "po" ]; then \
+	set -e; if [ -d "po" ]; then \
 	    for po_file in po/*.po; do \
 	        if [ -f "$$po_file" ]; then \
-	            lang=$(basename "$$po_file" .po); \
+	            lang=$$(basename "$$po_file" .po); \
 	            echo "  Compiling $$lang..."; \
 	            mkdir -p "locale/$$lang/LC_MESSAGES"; \
 	            msgfmt "$$po_file" -o "locale/$$lang/LC_MESSAGES/$(UUID).mo"; \
