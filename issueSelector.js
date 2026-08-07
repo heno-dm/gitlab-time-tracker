@@ -3,16 +3,21 @@ import St from 'gi://St';
 import Clutter from 'gi://Clutter';
 import GLib from 'gi://GLib';
 import Soup from 'gi://Soup';
-import * as ModalDialog from 'resource:///org/gnome/shell/ui/modalDialog.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as Animation from 'resource:///org/gnome/shell/ui/animation.js';
 
 import {AvatarLoader} from './avatarLoader.js';
+import {getRecentIssues} from './state.js';
 
 export const IssueSelectorDialog = GObject.registerClass(
-class IssueSelectorDialog extends ModalDialog.ModalDialog {
+class IssueSelectorDialog extends St.BoxLayout {
     _init(settings, gettext, currentProject, currentIssue, onSelected) {
-        super._init({ styleClass: 'gitlab-issue-selector-dialog' });
+        super._init({
+            vertical: true,
+            style_class: 'modal-dialog gitlab-issue-selector-dialog',
+            reactive: true,
+            can_focus: true,
+        });
 
         this._settings = settings;
         this._ = gettext;
@@ -21,6 +26,7 @@ class IssueSelectorDialog extends ModalDialog.ModalDialog {
         this._preselectedIssue = currentIssue;
         this._httpSession = new Soup.Session();
         this._avatarLoader = new AvatarLoader(settings, this._httpSession);
+        this._recentIssues = getRecentIssues(settings);
         this._projects = [];
         this._allIssues = [];
         this._selectedProject = null;
@@ -31,6 +37,21 @@ class IssueSelectorDialog extends ModalDialog.ModalDialog {
         this._issueRequestSerial = 0;
         this._issueReloadId = null;
         this._currentUser = null;
+        this._defaultButtonAction = null;
+        this._escapeButtonAction = null;
+
+        this.connect('key-press-event', (_actor, event) => {
+            const symbol = event.get_key_symbol();
+            if (symbol === Clutter.KEY_Escape && this._escapeButtonAction) {
+                this._escapeButtonAction();
+                return Clutter.EVENT_STOP;
+            }
+            if ((symbol === Clutter.KEY_Return || symbol === Clutter.KEY_KP_Enter) && this._defaultButtonAction) {
+                this._defaultButtonAction();
+                return Clutter.EVENT_STOP;
+            }
+            return Clutter.EVENT_PROPAGATE;
+        });
 
         this._buildUI();
         this._loadCurrentUser();
@@ -117,6 +138,13 @@ class IssueSelectorDialog extends ModalDialog.ModalDialog {
             style: 'font-weight: bold; margin-bottom: 5px;'
         });
         issueBox.add_child(issueLabel);
+
+        this._recentIssueBox = new St.BoxLayout({
+            vertical: true,
+            style: 'margin-bottom: 10px;',
+        });
+        issueBox.add_child(this._recentIssueBox);
+        this._updateRecentIssueList();
 
         // Issue filters are sent to GitLab; do not filter locally because large projects may exceed one page.
         this._issueSearchEntry = new St.Entry({
@@ -217,7 +245,7 @@ class IssueSelectorDialog extends ModalDialog.ModalDialog {
 
         content.add_child(issueBox);
 
-        this.contentLayout.add_child(content);
+        this.add_child(content);
 
         // Buttons
         this.setButtons([
@@ -235,6 +263,56 @@ class IssueSelectorDialog extends ModalDialog.ModalDialog {
 
         this._selectedProjectWidget = null;
         this._selectedIssueWidget = null;
+    }
+
+    setButtons(buttons) {
+        const buttonBox = new St.BoxLayout({
+            vertical: false,
+            style: 'spacing: 8px; padding-top: 10px;',
+            x_align: Clutter.ActorAlign.END,
+        });
+
+        for (const buttonInfo of buttons) {
+            const button = new St.Button({
+                label: buttonInfo.label,
+                style_class: 'modal-dialog-button button',
+                can_focus: true,
+                x_expand: false,
+            });
+            button.connect('clicked', buttonInfo.action);
+            buttonBox.add_child(button);
+
+            if (buttonInfo.default)
+                this._defaultButtonAction = buttonInfo.action;
+            if (buttonInfo.key === Clutter.KEY_Escape)
+                this._escapeButtonAction = buttonInfo.action;
+        }
+
+        this.add_child(buttonBox);
+    }
+
+    open() {
+        if (!this.get_parent())
+            Main.layoutManager.uiGroup.add_child(this);
+
+        this._positionOnPrimaryMonitor();
+        this.show();
+        this.raise_top();
+        this.grab_key_focus();
+    }
+
+    close() {
+        this.destroy();
+    }
+
+    _positionOnPrimaryMonitor() {
+        const monitor = Main.layoutManager.primaryMonitor;
+        const width = this.get_width() || 640;
+        const height = this.get_height() || 620;
+        this.set_position(
+            Math.floor(monitor.x + (monitor.width - width) / 2),
+            Math.floor(monitor.y + (monitor.height - height) / 2)
+        );
     }
 
     _apiGet(path, overlay, loadingText, onSuccess, onError = null) {
@@ -569,6 +647,55 @@ class IssueSelectorDialog extends ModalDialog.ModalDialog {
             this._loadMoreButton.show();
         else
             this._loadMoreButton.hide();
+    }
+
+    _updateRecentIssueList() {
+        this._recentIssueBox.destroy_all_children();
+
+        if (this._recentIssues.length === 0)
+            return;
+
+        this._recentIssueBox.add_child(new St.Label({
+            text: this._('Recently worked issues'),
+            style: 'font-weight: bold; margin-bottom: 5px;',
+        }));
+
+        for (const recent of this._recentIssues) {
+            const item = new St.Button({
+                style_class: 'popup-menu-item',
+                can_focus: true,
+                track_hover: true,
+                x_expand: true,
+                x_align: Clutter.ActorAlign.FILL,
+            });
+
+            const box = new St.BoxLayout({
+                vertical: true,
+                x_expand: true,
+                x_align: Clutter.ActorAlign.START,
+            });
+
+            box.add_child(new St.Label({
+                text: `#${recent.issue.iid} - ${recent.issue.title}`,
+                x_align: Clutter.ActorAlign.START,
+                x_expand: true,
+            }));
+
+            box.add_child(new St.Label({
+                text: recent.project.path_with_namespace,
+                style: 'font-size: 11px; opacity: 170;',
+                x_align: Clutter.ActorAlign.START,
+                x_expand: true,
+            }));
+
+            item.set_child(box);
+            item.connect('clicked', () => {
+                this._onSelected(recent.project, recent.issue);
+                this.close();
+            });
+
+            this._recentIssueBox.add_child(item);
+        }
     }
 
     _selectIssue(issue, widget) {

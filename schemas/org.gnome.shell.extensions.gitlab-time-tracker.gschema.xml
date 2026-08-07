@@ -21,6 +21,11 @@
       <summary>Timer State</summary>
       <description>JSON string containing the current timer state (for persistence across lock screen)</description>
     </key>
+    <key name="recent-issues" type="s">
+      <default>'[]'</default>
+      <summary>Recent Issues</summary>
+      <description>JSON list containing the last issues that received tracked time</description>
+    </key>
     <key name="resume-on-unlock" type="b">
       <default>false</default>
       <summary>Resume timer when screen is unlocked</summary>

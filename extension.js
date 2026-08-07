@@ -13,6 +13,8 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import {IssueSelectorDialog} from './issueSelector.js';
 import {ReportDialog} from './reportDialog.js';
+import {TimeEntryDialog} from './timeEntryDialog.js';
+import {addRecentIssue, serializeIssue, serializeProject} from './state.js';
 
 const GitLabIssuesIndicator = GObject.registerClass(
 class GitLabIssuesIndicator extends PanelMenu.Button {
@@ -268,11 +270,13 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
     _stopTimer() {
         if (!this._timerRunning) return;
 
-        // Send time to GitLab
-        this._sendTimeToGitLab();
+        const duration = this._formatGitLabDuration(this._elapsedSeconds);
+        const dialog = new TimeEntryDialog(this._, this._selectedProject, this._selectedIssue, duration, (comment) => {
+            this._sendTimeToGitLab(duration, comment);
+            this._resetTimer();
+        });
 
-        // Reset timer
-        this._resetTimer();
+        dialog.open();
     }
 
     _cancelTimer() {
@@ -344,20 +348,31 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
         }
     }
 
-    _sendTimeToGitLab() {
-        const url = this._settings.get_string('gitlab-url');
-        const token = this._settings.get_string('gitlab-token');
-
-        // Convert seconds to GitLab format (hours and minutes)
-        const hours = Math.floor(this._elapsedSeconds / 3600);
-        const minutes = Math.floor((this._elapsedSeconds % 3600) / 60);
+    _formatGitLabDuration(seconds) {
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
 
         let duration = '';
         if (hours > 0) duration += `${hours}h`;
         if (minutes > 0) duration += `${minutes}m`;
-        if (duration === '') duration = '1m'; // Minimum 1 minute
 
-        const apiUrl = `${url}/api/v4/projects/${this._selectedProject.id}/issues/${this._selectedIssue.iid}/add_spent_time?duration=${duration}`;
+        return duration || '1m';
+    }
+
+    _sendTimeToGitLab(duration, comment) {
+        const url = this._settings.get_string('gitlab-url');
+        const token = this._settings.get_string('gitlab-token');
+        const project = this._selectedProject;
+        const issue = this._selectedIssue;
+        const params = [['duration', duration]];
+
+        if (comment)
+            params.push(['summary', comment]);
+
+        const query = params
+            .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+            .join('&');
+        const apiUrl = `${url}/api/v4/projects/${project.id}/issues/${issue.iid}/add_spent_time?${query}`;
 
         const message = Soup.Message.new('POST', apiUrl);
         message.request_headers.append('PRIVATE-TOKEN', token);
@@ -370,7 +385,8 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
                 try {
                     session.send_and_read_finish(result);
                     if (message.status_code === 201 || message.status_code === 200) {
-                        Main.notify(this._('GitLab Issues Timer'), `${this._('Time sent')}: ${duration} ${this._('on issue')} #${this._selectedIssue.iid}`);
+                        addRecentIssue(this._settings, project, issue);
+                        Main.notify(this._('GitLab Issues Timer'), `${this._('Time sent')}: ${duration} ${this._('on issue')} #${issue.iid}`);
                     } else if (message.status_code === 401 || message.status_code === 403) {
                         Main.notify(this._('Error'), this._('Please configure the server URL and token in preferences'));
                     } else {
@@ -397,24 +413,8 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
     }
 
     _saveTimerState() {
-        // Build project object if selected
-        const projectData = this._selectedProject ? {
-            id: this._selectedProject.id,
-            path_with_namespace: this._selectedProject.path_with_namespace,
-            name: this._selectedProject.name,
-            avatar_url: this._selectedProject.avatar_url || null,
-            web_url: this._selectedProject.web_url || null,
-            namespace: this._selectedProject.namespace || null
-        } : null;
-
-        // Build issue object if selected
-        const issueData = this._selectedIssue ? {
-            id: this._selectedIssue.id,
-            iid: this._selectedIssue.iid,
-            title: this._selectedIssue.title,
-            project_id: this._selectedIssue.project_id,
-            web_url: this._selectedIssue.web_url || null
-        } : null;
+        const projectData = serializeProject(this._selectedProject);
+        const issueData = serializeIssue(this._selectedIssue);
 
         if (this._timerRunning) {
             const state = {
