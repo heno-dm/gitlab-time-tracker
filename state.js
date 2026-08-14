@@ -62,3 +62,25 @@ export function addRecentIssue(settings, project, issue) {
 
     settings.set_string('recent-issues', JSON.stringify(recentIssues.slice(0, RECENT_ISSUE_LIMIT)));
 }
+
+export function getDefaultProject(settings) {
+    try {
+        const value = settings.get_string('default-project');
+        if (!value || value === '{}')
+            return null;
+
+        const project = JSON.parse(value);
+        if (!project?.id || !project?.path_with_namespace)
+            return null;
+
+        return project;
+    } catch (e) {
+        console.debug(`GitLab Timer: Unable to read default project: ${e.message}`);
+        return null;
+    }
+}
+
+export function setDefaultProject(settings, project) {
+    const projectData = serializeProject(project);
+    settings.set_string('default-project', projectData ? JSON.stringify(projectData) : '{}');
+}

@@ -5,6 +5,7 @@ import GLib from 'gi://GLib';
 import Soup from 'gi://Soup';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as Animation from 'resource:///org/gnome/shell/ui/animation.js';
+import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
 import {AvatarLoader} from './avatarLoader.js';
 import {getRecentIssues} from './state.js';
@@ -39,6 +40,13 @@ class IssueSelectorDialog extends St.BoxLayout {
         this._currentUser = null;
         this._defaultButtonAction = null;
         this._escapeButtonAction = null;
+        this._dragging = false;
+        this._dragStartX = 0;
+        this._dragStartY = 0;
+        this._dragActorX = 0;
+        this._dragActorY = 0;
+        this._maximized = false;
+        this._restoreGeometry = null;
 
         this.connect('key-press-event', (_actor, event) => {
             const symbol = event.get_key_symbol();
@@ -59,8 +67,10 @@ class IssueSelectorDialog extends St.BoxLayout {
     }
 
     _buildUI() {
+        this._buildTitleBar();
+
         // Main container
-        let content = new St.BoxLayout({
+        this._content = new St.BoxLayout({
             vertical: true,
             style_class: 'gitlab-selector-content',
             style: 'min-width: 600px; min-height: 500px;'
@@ -72,7 +82,7 @@ class IssueSelectorDialog extends St.BoxLayout {
             style_class: 'gitlab-selector-title',
             style: 'font-size: 16px; font-weight: bold; margin-bottom: 10px;'
         });
-        content.add_child(title);
+        this._content.add_child(title);
 
         // Project section
         let projectBox = new St.BoxLayout({
@@ -125,7 +135,7 @@ class IssueSelectorDialog extends St.BoxLayout {
 
         projectBox.add_child(projectContainer);
 
-        content.add_child(projectBox);
+        this._content.add_child(projectBox);
 
         // Issue section
         let issueBox = new St.BoxLayout({
@@ -173,7 +183,15 @@ class IssueSelectorDialog extends St.BoxLayout {
         });
         this._issueStateLabel = new St.Label({ text: this._stateLabel(this._getIssueState()) });
         this._issueStateButton.set_child(this._issueStateLabel);
-        this._issueStateButton.connect('clicked', () => this._cycleIssueState());
+        this._issueStateMenu = new PopupMenu.PopupMenu(this._issueStateButton, 0.0, St.Side.TOP);
+        Main.uiGroup.add_child(this._issueStateMenu.actor);
+        this._issueStateMenu.actor.hide();
+        for (const state of ['opened', 'closed', 'all']) {
+            const item = new PopupMenu.PopupMenuItem(this._stateLabel(state));
+            item.connect('activate', () => this._setIssueState(state));
+            this._issueStateMenu.addMenuItem(item);
+        }
+        this._issueStateButton.connect('clicked', () => this._issueStateMenu.toggle());
         filterBox.add_child(this._issueStateButton);
 
         this._issueAssigneeEntry = new St.Entry({
@@ -243,9 +261,9 @@ class IssueSelectorDialog extends St.BoxLayout {
         this._loadMoreButton.hide();
         issueBox.add_child(this._loadMoreButton);
 
-        content.add_child(issueBox);
+        this._content.add_child(issueBox);
 
-        this.add_child(content);
+        this.add_child(this._content);
 
         // Buttons
         this.setButtons([
@@ -265,8 +283,125 @@ class IssueSelectorDialog extends St.BoxLayout {
         this._selectedIssueWidget = null;
     }
 
+    _buildTitleBar() {
+        const titleBar = new St.BoxLayout({
+            vertical: false,
+            reactive: true,
+            style_class: 'gitlab-selector-titlebar',
+            style: 'padding: 6px 8px; spacing: 8px; background-color: rgba(255,255,255,0.08);',
+            x_expand: true,
+        });
+
+        const title = new St.Label({
+            text: this._('Issue selector'),
+            style: 'font-weight: bold;',
+            y_align: Clutter.ActorAlign.CENTER,
+            x_expand: true,
+        });
+        titleBar.add_child(title);
+
+        const minimizeButton = this._createTitleButton('_', () => this._toggleMinimized());
+        const maximizeButton = this._createTitleButton('[]', () => this._toggleMaximized());
+        const closeButton = this._createTitleButton('x', () => this.close());
+
+        titleBar.add_child(minimizeButton);
+        titleBar.add_child(maximizeButton);
+        titleBar.add_child(closeButton);
+
+        titleBar.connect('button-press-event', (_actor, event) => {
+            if (this._maximized)
+                return Clutter.EVENT_PROPAGATE;
+
+            const [stageX, stageY] = event.get_coords();
+            const [actorX, actorY] = this.get_position();
+            this._dragging = true;
+            this._dragStartX = stageX;
+            this._dragStartY = stageY;
+            this._dragActorX = actorX;
+            this._dragActorY = actorY;
+            this.raise_top();
+            return Clutter.EVENT_STOP;
+        });
+
+        titleBar.connect('motion-event', (_actor, event) => {
+            if (!this._dragging)
+                return Clutter.EVENT_PROPAGATE;
+
+            const [stageX, stageY] = event.get_coords();
+            this.set_position(
+                Math.floor(this._dragActorX + stageX - this._dragStartX),
+                Math.floor(this._dragActorY + stageY - this._dragStartY)
+            );
+            return Clutter.EVENT_STOP;
+        });
+
+        titleBar.connect('button-release-event', () => {
+            if (!this._dragging)
+                return Clutter.EVENT_PROPAGATE;
+
+            this._dragging = false;
+            return Clutter.EVENT_STOP;
+        });
+
+        this.add_child(titleBar);
+    }
+
+    _createTitleButton(label, action) {
+        const button = new St.Button({
+            label,
+            style_class: 'button',
+            can_focus: true,
+            style: 'min-width: 24px; min-height: 22px; padding: 2px 6px;',
+        });
+        button.connect('clicked', action);
+        return button;
+    }
+
+    _toggleMinimized() {
+        if (!this._content.visible) {
+            this._content.show();
+            this._buttonBox.show();
+            this._positionOnPrimaryMonitor();
+            return;
+        }
+
+        this._content.hide();
+        this._buttonBox.hide();
+        this._maximized = false;
+        this.set_size(-1, -1);
+    }
+
+    _toggleMaximized() {
+        const monitor = Main.layoutManager.primaryMonitor;
+
+        if (this._maximized) {
+            this._maximized = false;
+            if (this._restoreGeometry) {
+                this.set_position(this._restoreGeometry.x, this._restoreGeometry.y);
+                this.set_size(this._restoreGeometry.width, this._restoreGeometry.height);
+            } else {
+                this.set_size(-1, -1);
+                this._positionOnPrimaryMonitor();
+            }
+            return;
+        }
+
+        const [x, y] = this.get_position();
+        this._restoreGeometry = {
+            x,
+            y,
+            width: this.get_width(),
+            height: this.get_height(),
+        };
+        this._content.show();
+        this._buttonBox.show();
+        this._maximized = true;
+        this.set_position(monitor.x + 24, monitor.y + 24);
+        this.set_size(monitor.width - 48, monitor.height - 48);
+    }
+
     setButtons(buttons) {
-        const buttonBox = new St.BoxLayout({
+        this._buttonBox = new St.BoxLayout({
             vertical: false,
             style: 'spacing: 8px; padding-top: 10px;',
             x_align: Clutter.ActorAlign.END,
@@ -280,7 +415,7 @@ class IssueSelectorDialog extends St.BoxLayout {
                 x_expand: false,
             });
             button.connect('clicked', buttonInfo.action);
-            buttonBox.add_child(button);
+            this._buttonBox.add_child(button);
 
             if (buttonInfo.default)
                 this._defaultButtonAction = buttonInfo.action;
@@ -288,7 +423,7 @@ class IssueSelectorDialog extends St.BoxLayout {
                 this._escapeButtonAction = buttonInfo.action;
         }
 
-        this.add_child(buttonBox);
+        this.add_child(this._buttonBox);
     }
 
     open() {
@@ -589,11 +724,9 @@ class IssueSelectorDialog extends St.BoxLayout {
         return ['opened', 'closed', 'all'].includes(state) ? state : 'opened';
     }
 
-    _cycleIssueState() {
-        const states = ['opened', 'closed', 'all'];
-        const nextState = states[(states.indexOf(this._getIssueState()) + 1) % states.length];
-        this._settings.set_string('issue-filter-state', nextState);
-        this._issueStateLabel.text = this._stateLabel(nextState);
+    _setIssueState(state) {
+        this._settings.set_string('issue-filter-state', state);
+        this._issueStateLabel.text = this._stateLabel(state);
         this._reloadIssues();
     }
 
@@ -790,6 +923,10 @@ class IssueSelectorDialog extends St.BoxLayout {
         }
         this._hideOverlay(this._projectLoadingOverlay);
         this._hideOverlay(this._issueLoadingOverlay);
+        if (this._issueStateMenu) {
+            this._issueStateMenu.destroy();
+            this._issueStateMenu = null;
+        }
         this._httpSession.abort();
         super.destroy();
     }

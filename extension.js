@@ -11,10 +11,8 @@ import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
-import {IssueSelectorDialog} from './issueSelector.js';
-import {ReportDialog} from './reportDialog.js';
 import {TimeEntryDialog} from './timeEntryDialog.js';
-import {addRecentIssue, serializeIssue, serializeProject} from './state.js';
+import {addRecentIssue, getDefaultProject, serializeIssue, serializeProject, setDefaultProject} from './state.js';
 
 const GitLabIssuesIndicator = GObject.registerClass(
 class GitLabIssuesIndicator extends PanelMenu.Button {
@@ -27,6 +25,8 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
         this._settings = extension.getSettings();
         this._extensionPath = extension.path;
         this._httpSession = new Soup.Session();
+        this._selectorProcess = null;
+        this._selectionChangedId = this._settings.connect('changed::selection-state', () => this._applySelectionState());
 
         // Timer state
         this._timerRunning = false;
@@ -151,29 +151,47 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
         }
 
         try {
-            console.debug('GitLab Timer: Creating IssueSelectorDialog...');
-            let dialog = new IssueSelectorDialog(this._settings, this._, this._selectedProject, this._selectedIssue, (project, issue) => {
-                this._selectedProject = project;
-                this._selectedIssue = issue;
-                this._projectLabel.label.text = `${this._('Project')}: ${project.path_with_namespace}`;
-                this._issueLabel.label.text = `${this._('Issue')}: #${issue.iid} - ${issue.title.length > 40 ? issue.title.substring(0, 40) + '...' : issue.title}`;
-
-                // Show the browser open buttons
-                this._openProjectButton.visible = true;
-                this._openIssueButton.visible = true;
-
-                // Save state immediately for session persistence
-                this._saveTimerState();
-            });
-
-            console.debug('GitLab Timer: Opening dialog...');
-            dialog.open();
-            console.debug('GitLab Timer: Dialog opened successfully');
+            const gjs = GLib.find_program_in_path('gjs') || 'gjs';
+            this._selectorProcess = Gio.Subprocess.new(
+                [gjs, '-m', `${this._extensionPath}/selectorWindow.js`],
+                Gio.SubprocessFlags.NONE
+            );
+            console.debug('GitLab Timer: Selector window launched successfully');
         } catch (e) {
             console.debug('GitLab Timer: Error opening issue selector: ' + e.message);
             console.debug('Stack trace: ' + e.stack);
             Main.notify(this._('Error'), this._('Unable to open selector') + ': ' + e.message);
         }
+    }
+
+    _applySelectionState() {
+        try {
+            const stateJson = this._settings.get_string('selection-state');
+            if (!stateJson || stateJson === '{}')
+                return;
+
+            const state = JSON.parse(stateJson);
+            if (!state.project || !state.issue)
+                return;
+
+            this._setSelectedIssue(state.project, state.issue);
+            this._settings.set_string('selection-state', '{}');
+        } catch (e) {
+            console.debug(`GitLab Timer: Unable to apply selector state: ${e.message}`);
+            this._settings.set_string('selection-state', '{}');
+        }
+    }
+
+    _setSelectedIssue(project, issue) {
+        this._selectedProject = project;
+        this._selectedIssue = issue;
+        if (!getDefaultProject(this._settings))
+            setDefaultProject(this._settings, project);
+        this._projectLabel.label.text = `${this._('Project')}: ${project.path_with_namespace}`;
+        this._issueLabel.label.text = `${this._('Issue')}: #${issue.iid} - ${issue.title.length > 40 ? issue.title.substring(0, 40) + '...' : issue.title}`;
+        this._openProjectButton.visible = true;
+        this._openIssueButton.visible = true;
+        this._saveTimerState();
     }
 
     _openProjectInBrowser() {
@@ -406,10 +424,18 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
             return;
         }
 
-        // Pass the currently selected project if available
-        let dialog = new ReportDialog(this._settings, this._, this._selectedProject);
-        dialog.open();
-        console.debug('GitLab Timer: Report dialog opened successfully');
+        try {
+            const gjs = GLib.find_program_in_path('gjs') || 'gjs';
+            const args = [gjs, '-m', `${this._extensionPath}/reportWindow.js`];
+            if (this._selectedProject?.id)
+                args.push(String(this._selectedProject.id));
+
+            Gio.Subprocess.new(args, Gio.SubprocessFlags.NONE);
+            console.debug('GitLab Timer: Report window launched successfully');
+        } catch (e) {
+            console.debug('GitLab Timer: Error opening report window: ' + e.message);
+            Main.notify(this._('Error'), this._('Unable to open report') + ': ' + e.message);
+        }
     }
 
     _saveTimerState() {
@@ -544,6 +570,11 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
 
         // Abort any pending HTTP requests
         this._httpSession.abort();
+
+        if (this._selectionChangedId) {
+            this._settings.disconnect(this._selectionChangedId);
+            this._selectionChangedId = null;
+        }
 
         if (this._timerId) {
             GLib.source_remove(this._timerId);

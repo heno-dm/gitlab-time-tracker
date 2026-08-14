@@ -2,6 +2,7 @@ import Adw from 'gi://Adw';
 import Gtk from 'gi://Gtk';
 
 import {ExtensionPreferences, gettext as _} from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
+import {getDefaultProject, setDefaultProject} from './state.js';
 
 export default class GitLabIssuesPreferences extends ExtensionPreferences {
     fillPreferencesWindow(window) {
@@ -37,6 +38,32 @@ export default class GitLabIssuesPreferences extends ExtensionPreferences {
             settings.set_string('gitlab-token', widget.get_text());
         });
         group.add(tokenRow);
+
+        const defaultProjectGroup = new Adw.PreferencesGroup({
+            title: _('Default Project'),
+            description: _('The first selected project is used as the default project for issue selection.'),
+        });
+        page.add(defaultProjectGroup);
+
+        const defaultProjectRow = new Adw.ActionRow({
+            title: _('Default project'),
+        });
+        const updateDefaultProjectRow = () => {
+            const project = getDefaultProject(settings);
+            defaultProjectRow.set_subtitle(project?.path_with_namespace || _('Not set yet'));
+        };
+        updateDefaultProjectRow();
+
+        const clearDefaultProjectButton = new Gtk.Button({
+            label: _('Clear'),
+            valign: Gtk.Align.CENTER,
+        });
+        clearDefaultProjectButton.connect('clicked', () => {
+            setDefaultProject(settings, null);
+            updateDefaultProjectRow();
+        });
+        defaultProjectRow.add_suffix(clearDefaultProjectButton);
+        defaultProjectGroup.add(defaultProjectRow);
 
         // Timer configuration group
         const timerGroup = new Adw.PreferencesGroup({

@@ -7,7 +7,7 @@ msgstr ""
 "Project-Id-Version: gitlab-time-tracker@gecka.nc\n"
 "Report-Msgid-Bugs-To: https://github.com/Gecka-Apps/gitlab-time-tracker/"
 "issues\n"
-"POT-Creation-Date: 2026-08-07 10:11+0200\n"
+"POT-Creation-Date: 2026-08-07 14:18+0200\n"
 "PO-Revision-Date: 2025-01-16 12:00+0000\n"
 "Last-Translator: \n"
 "Language-Team: German\n"
@@ -17,13 +17,13 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: extension.js:68 extension.js:181 extension.js:204 extension.js:227
-#: extension.js:284 extension.js:389
+#: extension.js:68 extension.js:199 extension.js:222 extension.js:245
+#: extension.js:302 extension.js:407
 msgid "GitLab Issues Timer"
 msgstr "GitLab Issues Timer"
 
-#: extension.js:68 extension.js:391 issueSelector.js:275 reportDialog.js:313
-#: reportDialog.js:514
+#: extension.js:68 extension.js:409 issueSelector.js:479 selectorWindow.js:227
+#: reportWindow.js:145 reportDialog.js:313 reportDialog.js:514
 msgid "Please configure the server URL and token in preferences"
 msgstr ""
 "Bitte konfigurieren Sie die Server-URL und das Token in den Einstellungen"
@@ -52,7 +52,7 @@ msgstr "Issue im Browser öffnen"
 msgid "Start"
 msgstr "Starten"
 
-#: extension.js:114 extension.js:261
+#: extension.js:114 extension.js:279
 msgid "Pause"
 msgstr "Pausieren"
 
@@ -60,7 +60,8 @@ msgstr "Pausieren"
 msgid "Stop & Send"
 msgstr "Stoppen & Senden"
 
-#: extension.js:124 issueSelector.js:234 timeEntryDialog.js:47
+#: extension.js:124 issueSelector.js:271 selectorWindow.js:207
+#: timeEntryDialog.js:47
 msgid "Cancel"
 msgstr "Abbrechen"
 
@@ -72,232 +73,312 @@ msgstr "Monatsbericht"
 msgid "Settings"
 msgstr "Einstellungen"
 
-#: extension.js:158 extension.js:526 issueSelector.js:65 reportDialog.js:66
-#: reportDialog.js:692
-msgid "Project"
-msgstr "Projekt"
-
-#: extension.js:159 extension.js:531 issueSelector.js:118
-msgid "Issue"
-msgstr "Issue"
-
-#: extension.js:175 extension.js:189 extension.js:197 extension.js:212
-#: extension.js:220 extension.js:391 extension.js:393 extension.js:396
-#: issueSelector.js:280 issueSelector.js:286 reportDialog.js:315
-#: reportDialog.js:516 reportDialog.js:776 reportDialog.js:824
+#: extension.js:163 extension.js:207 extension.js:215 extension.js:230
+#: extension.js:238 extension.js:409 extension.js:411 extension.js:414
+#: extension.js:437 issueSelector.js:484 issueSelector.js:490
+#: selectorWindow.js:242 selectorWindow.js:246 reportWindow.js:160
+#: reportWindow.js:163 reportDialog.js:315 reportDialog.js:516
+#: reportDialog.js:776 reportDialog.js:824
 msgid "Error"
 msgstr "Fehler"
 
-#: extension.js:175
+#: extension.js:163
 msgid "Unable to open selector"
 msgstr "Auswahl kann nicht geöffnet werden"
 
-#: extension.js:181
+#: extension.js:190 extension.js:552 issueSelector.js:94 selectorWindow.js:91
+#: reportDialog.js:66 reportDialog.js:692
+msgid "Project"
+msgstr "Projekt"
+
+#: extension.js:191 extension.js:557 issueSelector.js:147 selectorWindow.js:124
+msgid "Issue"
+msgstr "Issue"
+
+#: extension.js:199
 msgid "No project selected"
 msgstr "Kein Projekt ausgewählt"
 
-#: extension.js:189
+#: extension.js:207
 msgid "Project URL not available"
 msgstr "Projekt-URL nicht verfügbar"
 
-#: extension.js:197 extension.js:220
+#: extension.js:215 extension.js:238
 msgid "Unable to open browser"
 msgstr "Browser kann nicht geöffnet werden"
 
-#: extension.js:204
+#: extension.js:222
 msgid "No issue selected"
 msgstr "Keine Issue ausgewählt"
 
-#: extension.js:212
+#: extension.js:230
 msgid "Issue URL not available"
 msgstr "Issue-URL nicht verfügbar"
 
-#: extension.js:227 issueSelector.js:709
+#: extension.js:245 issueSelector.js:911
 msgid "Please select a project and an issue"
 msgstr "Bitte wählen Sie ein Projekt und eine Issue aus"
 
-#: extension.js:264 extension.js:522
+#: extension.js:282 extension.js:548
 msgid "Resume"
 msgstr "Fortsetzen"
 
-#: extension.js:284
+#: extension.js:302
 msgid "Timer cancelled"
 msgstr "Timer abgebrochen"
 
-#: extension.js:389
+#: extension.js:407
 msgid "Time sent"
 msgstr "Zeit gesendet"
 
-#: extension.js:389 timeEntryDialog.js:26
+#: extension.js:407 timeEntryDialog.js:26
 msgid "on issue"
 msgstr "auf Issue"
 
-#: extension.js:393
+#: extension.js:411
 msgid "Unable to send time"
 msgstr "Zeit kann nicht gesendet werden"
 
-#: extension.js:396
+#: extension.js:414
 msgid "Error sending time"
 msgstr "Fehler beim Senden der Zeit"
 
-#: issueSelector.js:52
+#: extension.js:437
+msgid "Unable to open report"
+msgstr "Bericht kann nicht geöffnet werden"
+
+#: issueSelector.js:81 selectorWindow.js:72
 msgid "Select a project and an issue"
 msgstr "Ein Projekt und eine Issue auswählen"
 
-#: issueSelector.js:72 reportDialog.js:114
+#: issueSelector.js:101 selectorWindow.js:95 reportDialog.js:114
 msgid "Search project..."
 msgstr "Projekt suchen..."
 
-#: issueSelector.js:132
+#: issueSelector.js:161 selectorWindow.js:132
 #, fuzzy
 msgid "Search issues on GitLab..."
 msgstr "Issue suchen..."
 
-#: issueSelector.js:161
+#: issueSelector.js:198 selectorWindow.js:155
 msgid "Assignee: username, me, or None"
 msgstr ""
 
-#: issueSelector.js:174
+#: issueSelector.js:211 selectorWindow.js:166
 msgid "Labels, comma-separated"
 msgstr ""
 
-#: issueSelector.js:216
+#: issueSelector.js:253 selectorWindow.js:195
 #, fuzzy
 msgid "Load more issues"
 msgstr "Issues laden..."
 
-#: issueSelector.js:239
+#: issueSelector.js:276 selectorWindow.js:212
 msgid "Select"
 msgstr "Auswählen"
 
-#: issueSelector.js:306 reportDialog.js:295
+#: issueSelector.js:296
+#, fuzzy
+msgid "Issue selector"
+msgstr "Keine Issue ausgewählt"
+
+#: issueSelector.js:510 selectorWindow.js:99 selectorWindow.js:258
+#: reportWindow.js:75 reportWindow.js:169 reportDialog.js:295
 msgid "Loading projects..."
 msgstr "Projekte laden..."
 
-#: issueSelector.js:452
+#: issueSelector.js:656 selectorWindow.js:353
 msgid "Loading issues..."
 msgstr "Issues laden..."
 
-#: issueSelector.js:534
+#: issueSelector.js:736 selectorWindow.js:412
 #, fuzzy
 msgid "Closed issues"
 msgstr "auf Issue"
 
-#: issueSelector.js:536
+#: issueSelector.js:738 selectorWindow.js:414
 #, fuzzy
 msgid "All issues"
 msgstr "auf Issue"
 
-#: issueSelector.js:538
+#: issueSelector.js:740 selectorWindow.js:416
 #, fuzzy
 msgid "Open issues"
 msgstr "auf Issue"
 
-#: issueSelector.js:571
+#: issueSelector.js:773 selectorWindow.js:441
 msgid "No issues found"
 msgstr "Keine Issues gefunden"
 
-#: issueSelector.js:590
+#: issueSelector.js:792 selectorWindow.js:454
 msgid "Recently worked issues"
 msgstr ""
 
-#: issueSelector.js:709 reportDialog.js:683 reportDialog.js:783
+#: issueSelector.js:911 reportDialog.js:683 reportDialog.js:783
 #: reportDialog.js:832 reportDialog.js:845
 msgid "GitLab Time Tracking"
 msgstr "GitLab Zeiterfassung"
 
-#: reportDialog.js:48 reportDialog.js:691
+#: selectorWindow.js:36
+#, fuzzy
+msgid "GitLab Issue Selector"
+msgstr "GitLab Issues Timer"
+
+#: selectorWindow.js:176 selectorWindow.js:441
+#, fuzzy
+msgid "Select a project first"
+msgstr "Ein Projekt auswählen..."
+
+#: reportWindow.js:35
+#, fuzzy
+msgid "GitLab Time Report"
+msgstr "Monatlicher Zeitbericht"
+
+#: reportWindow.js:58 reportWindow.js:395 reportDialog.js:48
+#: reportDialog.js:691
 msgid "Monthly Time Report"
 msgstr "Monatlicher Zeitbericht"
 
-#: reportDialog.js:91
-msgid "Select a project..."
+#: reportWindow.js:98
+msgid "User"
+msgstr ""
+
+#: reportWindow.js:99 reportWindow.js:276
+#, fuzzy
+msgid "All users"
+msgstr "auf Issue"
+
+#: reportWindow.js:103
+#, fuzzy
+msgid "Category"
+msgstr "Kategorien"
+
+#: reportWindow.js:105
+msgid "Category labels or regex, comma-separated"
+msgstr ""
+
+#: reportWindow.js:118 reportDialog.js:243
+msgid "Export Markdown"
+msgstr "Markdown exportieren"
+
+#: reportWindow.js:122 reportDialog.js:247
+msgid "Export CSV"
+msgstr "CSV exportieren"
+
+#: reportWindow.js:126
+#, fuzzy
+msgid "Select a project"
 msgstr "Ein Projekt auswählen..."
 
+#: reportWindow.js:210 reportDialog.js:262
+msgid "January"
+msgstr "Januar"
+
+#: reportWindow.js:210 reportDialog.js:262
+msgid "February"
+msgstr "Februar"
+
+#: reportWindow.js:210 reportDialog.js:262
+msgid "March"
+msgstr "März"
+
+#: reportWindow.js:210 reportDialog.js:263
+msgid "April"
+msgstr "April"
+
+#: reportWindow.js:210 reportDialog.js:263
+msgid "May"
+msgstr "Mai"
+
+#: reportWindow.js:210 reportDialog.js:263
+msgid "June"
+msgstr "Juni"
+
+#: reportWindow.js:211 reportDialog.js:264
+msgid "July"
+msgstr "Juli"
+
+#: reportWindow.js:211 reportDialog.js:264
+msgid "August"
+msgstr "August"
+
+#: reportWindow.js:211 reportDialog.js:264
+msgid "September"
+msgstr "September"
+
+#: reportWindow.js:211 reportDialog.js:265
+msgid "October"
+msgstr "Oktober"
+
+#: reportWindow.js:211 reportDialog.js:265
+msgid "November"
+msgstr "November"
+
+#: reportWindow.js:211 reportDialog.js:265
+msgid "December"
+msgstr "Dezember"
+
+#: reportWindow.js:219 reportDialog.js:457
+msgid "Loading..."
+msgstr "Laden..."
+
+#: reportWindow.js:301
+msgid "Unknown user"
+msgstr ""
+
+#: reportWindow.js:316 reportDialog.js:549 reportDialog.js:724
+msgid "Other"
+msgstr "Andere"
+
+#: reportWindow.js:316 reportDialog.js:549 reportDialog.js:724
+msgid "No label"
+msgstr "Kein Label"
+
+#: reportWindow.js:338 reportDialog.js:618
+msgid "No time tracked for this period"
+msgstr "Keine Zeit für diesen Zeitraum erfasst"
+
+#: reportWindow.js:339 reportWindow.js:354 reportWindow.js:397
 #: reportDialog.js:231 reportDialog.js:670 reportDialog.js:678
 #: reportDialog.js:694
 msgid "Total time"
 msgstr "Gesamtzeit"
 
-#: reportDialog.js:243
-msgid "Export Markdown"
-msgstr "Markdown exportieren"
+#: reportWindow.js:354
+msgid "Category total"
+msgstr ""
 
-#: reportDialog.js:247
-msgid "Export CSV"
-msgstr "CSV exportieren"
+#: reportWindow.js:359 reportWindow.js:402
+msgid "Time by user and category"
+msgstr ""
+
+#: reportWindow.js:396 reportDialog.js:693
+msgid "Period"
+msgstr "Zeitraum"
+
+#: reportWindow.js:398 reportDialog.js:697
+msgid "Summary by category"
+msgstr "Zusammenfassung nach Kategorie"
+
+#: reportWindow.js:440 reportDialog.js:846
+msgid "Report exported"
+msgstr "Bericht exportiert"
+
+#: reportWindow.js:442 reportDialog.js:776 reportDialog.js:824
+msgid "Unable to export"
+msgstr "Export nicht möglich"
+
+#: reportDialog.js:91
+msgid "Select a project..."
+msgstr "Ein Projekt auswählen..."
 
 #: reportDialog.js:251
 msgid "Close"
 msgstr "Schließen"
 
-#: reportDialog.js:262
-msgid "January"
-msgstr "Januar"
-
-#: reportDialog.js:262
-msgid "February"
-msgstr "Februar"
-
-#: reportDialog.js:262
-msgid "March"
-msgstr "März"
-
-#: reportDialog.js:263
-msgid "April"
-msgstr "April"
-
-#: reportDialog.js:263
-msgid "May"
-msgstr "Mai"
-
-#: reportDialog.js:263
-msgid "June"
-msgstr "Juni"
-
-#: reportDialog.js:264
-msgid "July"
-msgstr "Juli"
-
-#: reportDialog.js:264
-msgid "August"
-msgstr "August"
-
-#: reportDialog.js:264
-msgid "September"
-msgstr "September"
-
-#: reportDialog.js:265
-msgid "October"
-msgstr "Oktober"
-
-#: reportDialog.js:265
-msgid "November"
-msgstr "November"
-
-#: reportDialog.js:265
-msgid "December"
-msgstr "Dezember"
-
 #: reportDialog.js:397
 msgid "No projects available"
 msgstr "Keine Projekte verfügbar"
-
-#: reportDialog.js:457
-msgid "Loading..."
-msgstr "Laden..."
-
-#: reportDialog.js:549 reportDialog.js:724
-msgid "Other"
-msgstr "Andere"
-
-#: reportDialog.js:549 reportDialog.js:724
-msgid "No label"
-msgstr "Kein Label"
-
-#: reportDialog.js:618
-msgid "No time tracked for this period"
-msgstr "Keine Zeit für diesen Zeitraum erfasst"
 
 #: reportDialog.js:678
 msgid "Issues"
@@ -311,25 +392,9 @@ msgstr "Kategorien"
 msgid "No data to export"
 msgstr "Keine Daten zum Exportieren"
 
-#: reportDialog.js:693
-msgid "Period"
-msgstr "Zeitraum"
-
-#: reportDialog.js:697
-msgid "Summary by category"
-msgstr "Zusammenfassung nach Kategorie"
-
 #: reportDialog.js:707
 msgid "Detail by issue"
 msgstr "Detail nach Ticket"
-
-#: reportDialog.js:776 reportDialog.js:824
-msgid "Unable to export"
-msgstr "Export nicht möglich"
-
-#: reportDialog.js:846
-msgid "Report exported"
-msgstr "Bericht exportiert"
 
 #: reportDialog.js:851
 msgid "Open File"
@@ -339,94 +404,118 @@ msgstr "Datei öffnen"
 msgid "Open Containing Folder"
 msgstr "Übergeordneten Ordner öffnen"
 
-#: prefs.js:16
+#: prefs.js:17
 msgid "GitLab Configuration"
 msgstr "GitLab-Konfiguration"
 
-#: prefs.js:17
+#: prefs.js:18
 msgid "Configure your GitLab server and access token"
 msgstr "Konfigurieren Sie Ihren GitLab-Server und Zugriffstoken"
 
-#: prefs.js:23
+#: prefs.js:24
 msgid "GitLab Server URL"
 msgstr "GitLab-Server-URL"
 
-#: prefs.js:33
+#: prefs.js:34
 msgid "Access Token"
 msgstr "Zugriffstoken"
 
 #: prefs.js:43
+#, fuzzy
+msgid "Default Project"
+msgstr "Projekt"
+
+#: prefs.js:44
+msgid ""
+"The first selected project is used as the default project for issue "
+"selection."
+msgstr ""
+
+#: prefs.js:49
+#, fuzzy
+msgid "Default project"
+msgstr "Ein Projekt auswählen..."
+
+#: prefs.js:53
+msgid "Not set yet"
+msgstr ""
+
+#: prefs.js:58
+msgid "Clear"
+msgstr ""
+
+#: prefs.js:70
 msgid "Timer Configuration"
 msgstr "Timer-Konfiguration"
 
-#: prefs.js:44
+#: prefs.js:71
 msgid "Configure timer behavior after screen lock, logout or restart"
 msgstr ""
 "Timer-Verhalten nach Bildschirmsperre, Abmeldung oder Neustart konfigurieren"
 
-#: prefs.js:50
+#: prefs.js:77
 msgid "Resume automatically after unlock"
 msgstr "Automatisch nach Entsperrung fortsetzen"
 
-#: prefs.js:51
+#: prefs.js:78
 msgid "Automatically resume the timer when the screen is unlocked"
 msgstr "Den Timer automatisch fortsetzen, wenn der Bildschirm entsperrt wird"
 
-#: prefs.js:58
+#: prefs.js:85
 msgid "Count elapsed time when locked"
 msgstr "Verstrichene Zeit bei Sperre zählen"
 
-#: prefs.js:59
+#: prefs.js:86
 msgid "Count time elapsed during lock, logout or shutdown"
 msgstr "Verstrichene Zeit während Sperre, Abmeldung oder Herunterfahren zählen"
 
-#: prefs.js:78
+#: prefs.js:105
 msgid "Keyboard Shortcuts"
 msgstr ""
 
-#: prefs.js:79
+#: prefs.js:106
 msgid ""
 "Use accelerator syntax such as <Super><Alt>t. Leave empty to disable a "
 "shortcut."
 msgstr ""
 
-#: prefs.js:83
+#: prefs.js:110
 msgid "Start, pause, or resume timer"
 msgstr ""
 
-#: prefs.js:84 timeEntryDialog.js:20
+#: prefs.js:111 timeEntryDialog.js:20
 #, fuzzy
 msgid "Stop and send time"
 msgstr "Zeit kann nicht gesendet werden"
 
-#: prefs.js:85
+#: prefs.js:112
 #, fuzzy
 msgid "Cancel timer"
 msgstr "Abbrechen"
 
-#: prefs.js:86
+#: prefs.js:113
 #, fuzzy
 msgid "Select project and issue"
 msgstr "Projekt & Issue auswählen"
 
-#: prefs.js:87
+#: prefs.js:114
 #, fuzzy
 msgid "Open monthly report"
 msgstr "Monatsbericht"
 
-#: prefs.js:91
+#: prefs.js:118
 msgid "Reports Configuration"
 msgstr "Berichtskonfiguration"
 
-#: prefs.js:92
+#: prefs.js:119
 msgid "Configure filters for monthly reports"
 msgstr "Filter für monatliche Berichte konfigurieren"
 
-#: prefs.js:98
+#: prefs.js:125
 msgid "Tags included in reports"
 msgstr "In Berichten enthaltene Tags"
 
-#: prefs.js:108
+#: prefs.js:135
 msgid ""
 "Leave empty to display all tags.\n"
 "Otherwise, enter a comma-separated list of tags or regular expressions.\n"
@@ -447,11 +536,11 @@ msgstr ""
 "\n"
 "Issues ohne diese Tags erscheinen als \"Andere\" in den Berichten."
 
-#: prefs.js:126
+#: prefs.js:153
 msgid "Information"
 msgstr "Informationen"
 
-#: prefs.js:131
+#: prefs.js:158
 msgid ""
 "To create a personal access token:\n"
 "1. Go to your GitLab profile\n"
@@ -488,9 +577,6 @@ msgstr ""
 
 #~ msgid "Error loading report"
 #~ msgstr "Fehler beim Laden des Berichts"
-
-#~ msgid "Unable to open report"
-#~ msgstr "Bericht kann nicht geöffnet werden"
 
 #~ msgid "Extension not found"
 #~ msgstr "Erweiterung nicht gefunden"

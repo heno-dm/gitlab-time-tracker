@@ -26,6 +26,16 @@
       <summary>Recent Issues</summary>
       <description>JSON list containing the last issues that received tracked time</description>
     </key>
+    <key name="selection-state" type="s">
+      <default>'{}'</default>
+      <summary>Selection State</summary>
+      <description>JSON object used by the external selector window to send the selected project and issue back to the extension</description>
+    </key>
+    <key name="default-project" type="s">
+      <default>'{}'</default>
+      <summary>Default Project</summary>
+      <description>JSON object containing the default project used by the issue selector</description>
+    </key>
     <key name="resume-on-unlock" type="b">
       <default>false</default>
       <summary>Resume timer when screen is unlocked</summary>
@@ -72,12 +82,12 @@
       <description>Issue state used when loading issues from GitLab</description>
     </key>
     <key name="issue-filter-assignee" type="s">
-      <default>''</default>
+      <default>'me'</default>
       <summary>Issue assignee filter</summary>
       <description>Assignee username, me, or None used when loading issues from GitLab</description>
     </key>
     <key name="issue-filter-labels" type="s">
-      <default>''</default>
+      <default>'doing'</default>
       <summary>Issue labels filter</summary>
       <description>Comma-separated labels used when loading issues from GitLab</description>
     </key>

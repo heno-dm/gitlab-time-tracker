@@ -52,6 +52,8 @@ build: clean
 	gnome-extensions pack -f \
 		--extra-source=avatarLoader.js \
 		--extra-source=state.js \
+		--extra-source=selectorWindow.js \
+		--extra-source=reportWindow.js \
 		--extra-source=timeEntryDialog.js \
 		--extra-source=metadata.json \
 		--extra-source=LICENSE \
@@ -92,7 +94,7 @@ pot:
 		--msgid-bugs-address="https://github.com/Gecka-Apps/gitlab-time-tracker/issues" \
 		--keyword=_ \
 		--add-comments=TRANSLATORS \
-		extension.js issueSelector.js reportDialog.js prefs.js timeEntryDialog.js
+		extension.js issueSelector.js selectorWindow.js reportWindow.js reportDialog.js prefs.js timeEntryDialog.js
 	@echo "✓ Template updated: po/$(UUID).pot"
 
 	@# Update LINGUAS file
