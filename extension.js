@@ -289,8 +289,8 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
         if (!this._timerRunning) return;
 
         const duration = this._formatGitLabDuration(this._elapsedSeconds);
-        const dialog = new TimeEntryDialog(this._, this._selectedProject, this._selectedIssue, duration, (comment) => {
-            this._sendTimeToGitLab(duration, comment);
+        const dialog = new TimeEntryDialog(this._, this._selectedProject, this._selectedIssue, duration, (editedDuration, comment) => {
+            this._sendTimeToGitLab(editedDuration, comment);
             this._resetTimer();
         });
 

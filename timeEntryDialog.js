@@ -23,9 +23,30 @@ class TimeEntryDialog extends ModalDialog.ModalDialog {
         }));
 
         content.add_child(new St.Label({
-            text: `${duration} ${this._('on issue')} #${issue.iid} - ${issue.title}`,
+            text: `#${issue.iid} - ${issue.title}`,
             style: 'margin-bottom: 10px;',
         }));
+
+        content.add_child(new St.Label({
+            text: this._('Time spent'),
+            style: 'font-weight: bold; margin-bottom: 5px;',
+        }));
+
+        this._durationEntry = new St.Entry({
+            text: duration,
+            hint_text: this._('For example: 1h 30m'),
+            can_focus: true,
+            track_hover: true,
+            style: 'margin-bottom: 10px;',
+        });
+        content.add_child(this._durationEntry);
+
+        this._durationError = new St.Label({
+            text: this._('Enter a duration such as 1h 30m'),
+            style: 'color: #e01b24; margin-bottom: 10px;',
+            visible: false,
+        });
+        content.add_child(this._durationError);
 
         content.add_child(new St.Label({
             text: this._('Comment about what you did'),
@@ -51,13 +72,20 @@ class TimeEntryDialog extends ModalDialog.ModalDialog {
             {
                 label: this._('Send'),
                 action: () => {
-                    this._onSend(this._commentEntry.get_text().trim());
+                    const durationText = this._durationEntry.get_text().trim();
+                    if (!/^(?:\d+(?:mo|w|d|h|m|s))(?:\s*\d+(?:mo|w|d|h|m|s))*$/.test(durationText)) {
+                        this._durationError.show();
+                        this._durationEntry.grab_key_focus();
+                        return;
+                    }
+
+                    this._onSend(durationText, this._commentEntry.get_text().trim());
                     this.close();
                 },
                 default: true,
             },
         ]);
 
-        this._commentEntry.grab_key_focus();
+        this._durationEntry.grab_key_focus();
     }
 });

@@ -7,7 +7,7 @@ msgstr ""
 "Project-Id-Version: gitlab-time-tracker@gecka.nc\n"
 "Report-Msgid-Bugs-To: https://github.com/Gecka-Apps/gitlab-time-tracker/"
 "issues\n"
-"POT-Creation-Date: 2026-08-07 14:18+0200\n"
+"POT-Creation-Date: 2026-08-14 17:16+0200\n"
 "PO-Revision-Date: 2025-01-16 12:00+0000\n"
 "Last-Translator: \n"
 "Language-Team: French\n"
@@ -60,7 +60,7 @@ msgid "Stop & Send"
 msgstr "Stop (envoyer)"
 
 #: extension.js:124 issueSelector.js:271 selectorWindow.js:207
-#: timeEntryDialog.js:47
+#: timeEntryDialog.js:68
 msgid "Cancel"
 msgstr "Annuler"
 
@@ -130,7 +130,7 @@ msgstr "Timer annulé"
 msgid "Time sent"
 msgstr "Temps envoyé"
 
-#: extension.js:407 timeEntryDialog.js:26
+#: extension.js:407
 msgid "on issue"
 msgstr "sur l'issue"
 
@@ -556,14 +556,27 @@ msgstr ""
 "4. Copiez le token et collez-le ci-dessus"
 
 #: timeEntryDialog.js:31
-msgid "Comment about what you did"
+#, fuzzy
+msgid "Time spent"
+msgstr "Temps envoyé"
+
+#: timeEntryDialog.js:37
+msgid "For example: 1h 30m"
 msgstr ""
 
-#: timeEntryDialog.js:36
-msgid "What did you do?"
+#: timeEntryDialog.js:45
+msgid "Enter a duration such as 1h 30m"
 msgstr ""
 
 #: timeEntryDialog.js:52
+msgid "Comment about what you did"
+msgstr ""
+
+#: timeEntryDialog.js:57
+msgid "What did you do?"
+msgstr ""
+
+#: timeEntryDialog.js:73
 msgid "Send"
 msgstr ""
 

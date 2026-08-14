@@ -6,10 +6,10 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: gitlab-time-tracker@gecka.nc 6549d07\n"
+"Project-Id-Version: gitlab-time-tracker@gecka.nc abea139\n"
 "Report-Msgid-Bugs-To: https://github.com/Gecka-Apps/gitlab-time-tracker/"
 "issues\n"
-"POT-Creation-Date: 2026-08-07 14:18+0200\n"
+"POT-Creation-Date: 2026-08-14 17:16+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -61,7 +61,7 @@ msgid "Stop & Send"
 msgstr ""
 
 #: extension.js:124 issueSelector.js:271 selectorWindow.js:207
-#: timeEntryDialog.js:47
+#: timeEntryDialog.js:68
 msgid "Cancel"
 msgstr ""
 
@@ -131,7 +131,7 @@ msgstr ""
 msgid "Time sent"
 msgstr ""
 
-#: extension.js:407 timeEntryDialog.js:26
+#: extension.js:407
 msgid "on issue"
 msgstr ""
 
@@ -522,13 +522,25 @@ msgid ""
 msgstr ""
 
 #: timeEntryDialog.js:31
-msgid "Comment about what you did"
+msgid "Time spent"
 msgstr ""
 
-#: timeEntryDialog.js:36
-msgid "What did you do?"
+#: timeEntryDialog.js:37
+msgid "For example: 1h 30m"
+msgstr ""
+
+#: timeEntryDialog.js:45
+msgid "Enter a duration such as 1h 30m"
 msgstr ""
 
 #: timeEntryDialog.js:52
+msgid "Comment about what you did"
+msgstr ""
+
+#: timeEntryDialog.js:57
+msgid "What did you do?"
+msgstr ""
+
+#: timeEntryDialog.js:73
 msgid "Send"
 msgstr ""

@@ -257,6 +257,18 @@ make clean
 make help
 ```
 
+### Development Workflow
+
+After making changes, disable the active extension before replacing it, then build, install, and enable the new version:
+
+```bash
+gnome-extensions disable gitlab-time-tracker@gecka.nc
+make install
+gnome-extensions enable gitlab-time-tracker@gecka.nc
+```
+
+Repeat this sequence after each change you want to test. Run these commands on the GNOME host rather than inside the development container.
+
 The `build` command uses `gnome-extensions pack` which automatically:
 - Compiles GSettings schemas
 - Compiles translations from .po files
