@@ -7,7 +7,7 @@ msgstr ""
 "Project-Id-Version: gitlab-time-tracker@gecka.nc\n"
 "Report-Msgid-Bugs-To: https://github.com/Gecka-Apps/gitlab-time-tracker/"
 "issues\n"
-"POT-Creation-Date: 2026-08-14 17:16+0200\n"
+"POT-Creation-Date: 2026-08-18 15:02+0200\n"
 "PO-Revision-Date: 2025-01-16 12:00+0000\n"
 "Last-Translator: \n"
 "Language-Team: Spanish\n"
@@ -23,7 +23,7 @@ msgid "GitLab Issues Timer"
 msgstr "Temporizador de Issues GitLab"
 
 #: extension.js:68 extension.js:409 issueSelector.js:479 selectorWindow.js:227
-#: reportWindow.js:145 reportDialog.js:313 reportDialog.js:514
+#: reportWindow.js:180 reportDialog.js:313 reportDialog.js:514
 msgid "Please configure the server URL and token in preferences"
 msgstr ""
 "Por favor, configure la URL del servidor y el token en las preferencias"
@@ -76,8 +76,8 @@ msgstr "Configuración"
 #: extension.js:163 extension.js:207 extension.js:215 extension.js:230
 #: extension.js:238 extension.js:409 extension.js:411 extension.js:414
 #: extension.js:437 issueSelector.js:484 issueSelector.js:490
-#: selectorWindow.js:242 selectorWindow.js:246 reportWindow.js:160
-#: reportWindow.js:163 reportDialog.js:315 reportDialog.js:516
+#: selectorWindow.js:242 selectorWindow.js:246 reportWindow.js:195
+#: reportWindow.js:211 reportDialog.js:315 reportDialog.js:516
 #: reportDialog.js:776 reportDialog.js:824
 msgid "Error"
 msgstr "Error"
@@ -182,35 +182,35 @@ msgstr "Seleccionar"
 msgid "Issue selector"
 msgstr "Ninguna issue seleccionada"
 
-#: issueSelector.js:510 selectorWindow.js:99 selectorWindow.js:258
-#: reportWindow.js:75 reportWindow.js:169 reportDialog.js:295
+#: issueSelector.js:510 selectorWindow.js:99 selectorWindow.js:264
+#: reportWindow.js:77 reportWindow.js:280 reportDialog.js:295
 msgid "Loading projects..."
 msgstr "Cargando proyectos..."
 
-#: issueSelector.js:656 selectorWindow.js:353
+#: issueSelector.js:656 selectorWindow.js:364
 msgid "Loading issues..."
 msgstr "Cargando issues..."
 
-#: issueSelector.js:736 selectorWindow.js:412
+#: issueSelector.js:736 selectorWindow.js:423
 #, fuzzy
 msgid "Closed issues"
 msgstr "en la issue"
 
-#: issueSelector.js:738 selectorWindow.js:414
+#: issueSelector.js:738 selectorWindow.js:425
 #, fuzzy
 msgid "All issues"
 msgstr "en la issue"
 
-#: issueSelector.js:740 selectorWindow.js:416
+#: issueSelector.js:740 selectorWindow.js:427
 #, fuzzy
 msgid "Open issues"
 msgstr "en la issue"
 
-#: issueSelector.js:773 selectorWindow.js:441
+#: issueSelector.js:773 selectorWindow.js:452
 msgid "No issues found"
 msgstr "No se encontraron issues"
 
-#: issueSelector.js:792 selectorWindow.js:454
+#: issueSelector.js:792 selectorWindow.js:465
 msgid "Recently worked issues"
 msgstr ""
 
@@ -224,7 +224,7 @@ msgstr "Seguimiento de Tiempo GitLab"
 msgid "GitLab Issue Selector"
 msgstr "Temporizador de Issues GitLab"
 
-#: selectorWindow.js:176 selectorWindow.js:441
+#: selectorWindow.js:176 selectorWindow.js:452
 #, fuzzy
 msgid "Select a project first"
 msgstr "Seleccionar un proyecto..."
@@ -234,137 +234,150 @@ msgstr "Seleccionar un proyecto..."
 msgid "GitLab Time Report"
 msgstr "Informe mensual de tiempo"
 
-#: reportWindow.js:58 reportWindow.js:395 reportDialog.js:48
+#: reportWindow.js:60 reportWindow.js:587 reportDialog.js:48
 #: reportDialog.js:691
 msgid "Monthly Time Report"
 msgstr "Informe mensual de tiempo"
 
-#: reportWindow.js:98
+#: reportWindow.js:105
 msgid "User"
 msgstr ""
 
-#: reportWindow.js:99 reportWindow.js:276
+#: reportWindow.js:107 reportWindow.js:237
 #, fuzzy
 msgid "All users"
 msgstr "en la issue"
 
-#: reportWindow.js:103
+#: reportWindow.js:138
 #, fuzzy
 msgid "Category"
 msgstr "Categorías"
 
-#: reportWindow.js:105
+#: reportWindow.js:140
 msgid "Category labels or regex, comma-separated"
 msgstr ""
 
-#: reportWindow.js:118 reportDialog.js:243
+#: reportWindow.js:153 reportDialog.js:243
 msgid "Export Markdown"
 msgstr "Exportar Markdown"
 
-#: reportWindow.js:122 reportDialog.js:247
+#: reportWindow.js:157 reportDialog.js:247
 msgid "Export CSV"
 msgstr "Exportar CSV"
 
-#: reportWindow.js:126
+#: reportWindow.js:161
 #, fuzzy
 msgid "Select a project"
 msgstr "Seleccionar un proyecto..."
 
-#: reportWindow.js:210 reportDialog.js:262
+#: reportWindow.js:225
+#, fuzzy
+msgid "Unable to load users"
+msgstr "No se puede cargar el informe"
+
+#: reportWindow.js:353 reportDialog.js:262
 msgid "January"
 msgstr "Enero"
 
-#: reportWindow.js:210 reportDialog.js:262
+#: reportWindow.js:353 reportDialog.js:262
 msgid "February"
 msgstr "Febrero"
 
-#: reportWindow.js:210 reportDialog.js:262
+#: reportWindow.js:353 reportDialog.js:262
 msgid "March"
 msgstr "Marzo"
 
-#: reportWindow.js:210 reportDialog.js:263
+#: reportWindow.js:353 reportDialog.js:263
 msgid "April"
 msgstr "Abril"
 
-#: reportWindow.js:210 reportDialog.js:263
+#: reportWindow.js:353 reportDialog.js:263
 msgid "May"
 msgstr "Mayo"
 
-#: reportWindow.js:210 reportDialog.js:263
+#: reportWindow.js:353 reportDialog.js:263
 msgid "June"
 msgstr "Junio"
 
-#: reportWindow.js:211 reportDialog.js:264
+#: reportWindow.js:354 reportDialog.js:264
 msgid "July"
 msgstr "Julio"
 
-#: reportWindow.js:211 reportDialog.js:264
+#: reportWindow.js:354 reportDialog.js:264
 msgid "August"
 msgstr "Agosto"
 
-#: reportWindow.js:211 reportDialog.js:264
+#: reportWindow.js:354 reportDialog.js:264
 msgid "September"
 msgstr "Septiembre"
 
-#: reportWindow.js:211 reportDialog.js:265
+#: reportWindow.js:354 reportDialog.js:265
 msgid "October"
 msgstr "Octubre"
 
-#: reportWindow.js:211 reportDialog.js:265
+#: reportWindow.js:354 reportDialog.js:265
 msgid "November"
 msgstr "Noviembre"
 
-#: reportWindow.js:211 reportDialog.js:265
+#: reportWindow.js:354 reportDialog.js:265
 msgid "December"
 msgstr "Diciembre"
 
-#: reportWindow.js:219 reportDialog.js:457
+#: reportWindow.js:366 reportDialog.js:457
 msgid "Loading..."
 msgstr "Cargando..."
 
-#: reportWindow.js:301
+#: reportWindow.js:391
+msgid "GitLab returned no timelogs for this period"
+msgstr ""
+
+#: reportWindow.js:409
+msgid "Unable to match timelogs to issues"
+msgstr ""
+
+#: reportWindow.js:493
 msgid "Unknown user"
 msgstr ""
 
-#: reportWindow.js:316 reportDialog.js:549 reportDialog.js:724
+#: reportWindow.js:508 reportDialog.js:549 reportDialog.js:724
 msgid "Other"
 msgstr "Otro"
 
-#: reportWindow.js:316 reportDialog.js:549 reportDialog.js:724
+#: reportWindow.js:508 reportDialog.js:549 reportDialog.js:724
 msgid "No label"
 msgstr "Sin etiqueta"
 
-#: reportWindow.js:338 reportDialog.js:618
+#: reportWindow.js:530 reportDialog.js:618
 msgid "No time tracked for this period"
 msgstr "No hay tiempo registrado para este período"
 
-#: reportWindow.js:339 reportWindow.js:354 reportWindow.js:397
+#: reportWindow.js:531 reportWindow.js:546 reportWindow.js:589
 #: reportDialog.js:231 reportDialog.js:670 reportDialog.js:678
 #: reportDialog.js:694
 msgid "Total time"
 msgstr "Tiempo total"
 
-#: reportWindow.js:354
+#: reportWindow.js:546
 msgid "Category total"
 msgstr ""
 
-#: reportWindow.js:359 reportWindow.js:402
+#: reportWindow.js:551 reportWindow.js:594
 msgid "Time by user and category"
 msgstr ""
 
-#: reportWindow.js:396 reportDialog.js:693
+#: reportWindow.js:588 reportDialog.js:693
 msgid "Period"
 msgstr "Período"
 
-#: reportWindow.js:398 reportDialog.js:697
+#: reportWindow.js:590 reportDialog.js:697
 msgid "Summary by category"
 msgstr "Resumen por categoría"
 
-#: reportWindow.js:440 reportDialog.js:846
+#: reportWindow.js:632 reportDialog.js:846
 msgid "Report exported"
 msgstr "Informe exportado"
 
-#: reportWindow.js:442 reportDialog.js:776 reportDialog.js:824
+#: reportWindow.js:634 reportDialog.js:776 reportDialog.js:824
 msgid "Unable to export"
 msgstr "No se puede exportar"
 
@@ -588,9 +601,6 @@ msgstr ""
 
 #~ msgid "Error loading projects"
 #~ msgstr "Error al cargar los proyectos"
-
-#~ msgid "Unable to load report"
-#~ msgstr "No se puede cargar el informe"
 
 #~ msgid "Error loading report"
 #~ msgstr "Error al cargar el informe"

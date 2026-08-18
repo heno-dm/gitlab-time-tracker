@@ -6,7 +6,7 @@ import GObject from 'gi://GObject';
 import Gtk from 'gi://Gtk?version=4.0';
 import Soup from 'gi://Soup?version=3.0';
 
-import {getDefaultProject, getRecentIssues, serializeIssue, serializeProject} from './state.js';
+import {getDefaultProject, getProjectsCache, getRecentIssues, serializeIssue, serializeProject, setProjectsCache} from './state.js';
 
 const SCHEMA_ID = 'org.gnome.shell.extensions.gitlab-time-tracker';
 const _ = (text) => text;
@@ -255,14 +255,25 @@ class SelectorWindow extends Gtk.ApplicationWindow {
     }
 
     _loadProjects() {
-        this._projectStatusLabel.label = _('Loading projects...');
-        this._apiGet('/projects?membership=true&per_page=100&order_by=last_activity_at', data => {
-            this._projects = data;
-            this._projectStatusLabel.label = '';
+        const cachedProjects = getProjectsCache(this._settings);
+        if (cachedProjects.length > 0) {
+            this._projects = cachedProjects;
             this._updateProjectList();
             this._selectDefaultProject();
+        } else {
+            this._projectStatusLabel.label = _('Loading projects...');
+        }
+
+        this._apiGet('/projects?membership=true&per_page=100&order_by=last_activity_at', data => {
+            this._projects = data;
+            setProjectsCache(this._settings, data);
+            this._projectStatusLabel.label = '';
+            this._updateProjectList();
+            if (!this._selectedProject)
+                this._selectDefaultProject();
         }, error => {
-            this._projectStatusLabel.label = error;
+            if (cachedProjects.length === 0)
+                this._projectStatusLabel.label = error;
         });
     }
 

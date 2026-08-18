@@ -36,6 +36,11 @@
       <summary>Default Project</summary>
       <description>JSON object containing the default project used by the issue selector</description>
     </key>
+    <key name="projects-cache" type="s">
+      <default>'{}'</default>
+      <summary>Projects Cache</summary>
+      <description>JSON object containing the cached GitLab project list</description>
+    </key>
     <key name="resume-on-unlock" type="b">
       <default>false</default>
       <summary>Resume timer when screen is unlocked</summary>

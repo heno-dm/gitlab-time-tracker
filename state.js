@@ -84,3 +84,24 @@ export function setDefaultProject(settings, project) {
     const projectData = serializeProject(project);
     settings.set_string('default-project', projectData ? JSON.stringify(projectData) : '{}');
 }
+
+export function getProjectsCache(settings) {
+    try {
+        const cache = JSON.parse(settings.get_string('projects-cache'));
+        const url = settings.get_string('gitlab-url').replace(/\/$/, '');
+        if (cache?.url !== url || !Array.isArray(cache.projects))
+            return [];
+
+        return cache.projects.filter(project => project?.id && project?.path_with_namespace);
+    } catch (e) {
+        return [];
+    }
+}
+
+export function setProjectsCache(settings, projects) {
+    const cache = {
+        url: settings.get_string('gitlab-url').replace(/\/$/, ''),
+        projects: projects.map(serializeProject).filter(Boolean),
+    };
+    settings.set_string('projects-cache', JSON.stringify(cache));
+}
