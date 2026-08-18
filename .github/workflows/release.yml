@@ -21,6 +21,12 @@ jobs:
     - name: Build extension
       run: make build
 
+    - name: Run Shexli
+      run: |
+        python3 -m venv /tmp/shexli-venv
+        /tmp/shexli-venv/bin/pip install -U shexli
+        /tmp/shexli-venv/bin/shexli build/timelogs-extension@heno-dm.github.io.shell-extension.zip
+
     - name: Get version from tag
       id: get_version
       run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
