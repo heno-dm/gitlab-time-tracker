@@ -68,6 +68,10 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
             Main.notify(this._('GitLab Issues Timer'), this._('Please configure the server URL and token in preferences'));
             return false;
         }
+        if (!/^https?:\/\//i.test(url)) {
+            Main.notify(this._('GitLab Issues Timer'), this._('The GitLab server URL must include http:// or https://'));
+            return false;
+        }
         return true;
     }
 

@@ -28,9 +28,9 @@ jobs:
     - name: Rename artifact with version
       run: |
         VERSION=${{ env.VERSION }}
-        mv build/gitlab-time-tracker@gecka.nc.shell-extension.zip "build/gitlab-time-tracker@gecka.nc-v${VERSION}.shell-extension.zip"
+        mv build/timelogs-extension@heno-dm.github.io.shell-extension.zip "build/timelogs-extension@heno-dm.github.io-v${VERSION}.shell-extension.zip"
 
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v2
       with:
-        files: build/gitlab-time-tracker@gecka.nc-v${{ env.VERSION }}.shell-extension.zip
+        files: build/timelogs-extension@heno-dm.github.io-v${{ env.VERSION }}.shell-extension.zip

@@ -1,4 +1,4 @@
-# GitLab Time Tracking
+# Timelogs Extension
 
 A GNOME Shell extension for tracking time spent on GitLab issues from the top bar.
 
@@ -39,7 +39,7 @@ This personal fork is intended to be installed from source:
 git clone <this-repository-url> gitlab-time-tracker
 cd gitlab-time-tracker
 make install
-gnome-extensions enable gitlab-time-tracker@gecka.nc
+gnome-extensions enable timelogs-extension@heno-dm.github.io
 ```
 
 On Wayland, log out and back in if GNOME Shell does not detect the newly installed extension. On X11, restart GNOME Shell with `Alt+F2`, enter `r`, and press Enter.
@@ -50,7 +50,7 @@ The maintained upstream release is also available from [extensions.gnome.org](ht
 
 1. Open the extension menu from the timer icon in the top bar.
 2. Select **Settings**.
-3. Enter the base URL of your GitLab instance, such as `https://gitlab.com`.
+3. Enter the complete URL of your GitLab instance, including the protocol, such as `https://gitlab.com`. HTTPS is recommended.
 4. Enter a personal access token with the `api` scope.
 5. Optionally configure report labels and keyboard shortcuts.
 
@@ -117,7 +117,7 @@ This is a GNOME Shell extension written in JavaScript and loaded directly by GNO
 
 GitLab requests use API v4 with the `PRIVATE-TOKEN` header. Timer and selected-project state are serialized as JSON in the GSettings `timer-state` value so they can survive extension reloads, lock screens, logout, and restart.
 
-The extension UUID is `gitlab-time-tracker@gecka.nc`.
+The extension UUID is `timelogs-extension@heno-dm.github.io`. Its GSettings schema is separate from upstream, so both extensions can coexist without sharing configuration.
 
 ## Development
 
@@ -146,7 +146,7 @@ make clean
 The packaged extension is written to:
 
 ```text
-build/gitlab-time-tracker@gecka.nc.shell-extension.zip
+build/timelogs-extension@heno-dm.github.io.shell-extension.zip
 ```
 
 The `build/`, `locale/`, compiled GSettings schema, and compiled translation files are generated artifacts and should not be committed.
@@ -154,9 +154,9 @@ The `build/`, `locale/`, compiled GSettings schema, and compiled translation fil
 For manual runtime testing, disable the installed extension before replacing it, then install and enable the new build:
 
 ```bash
-gnome-extensions disable gitlab-time-tracker@gecka.nc
+gnome-extensions disable timelogs-extension@heno-dm.github.io
 make install
-gnome-extensions enable gitlab-time-tracker@gecka.nc
+gnome-extensions enable timelogs-extension@heno-dm.github.io
 ```
 
 Run GNOME integration commands on the GNOME host rather than inside a development container.

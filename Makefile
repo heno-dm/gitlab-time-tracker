@@ -1,5 +1,5 @@
-NAME = gitlab-time-tracker
-UUID = $(NAME)@gecka.nc
+NAME = timelogs-extension
+UUID = $(NAME)@heno-dm.github.io
 EXTENSION_PATH = $(HOME)/.local/share/gnome-shell/extensions/$(UUID)
 
 .PHONY: build install pot clean remove test-shell test-prefs help
@@ -91,7 +91,7 @@ pot:
 		--from-code=utf-8 \
 		--package-name=$(UUID) \
 		--package-version=$(shell git describe --tags --always 2>/dev/null || echo "1.0.0") \
-		--msgid-bugs-address="https://github.com/Gecka-Apps/gitlab-time-tracker/issues" \
+		--msgid-bugs-address="https://github.com/heno-dm/gitlab-time-tracker/issues" \
 		--keyword=_ \
 		--add-comments=TRANSLATORS \
 		extension.js issueSelector.js selectorWindow.js reportWindow.js reportDialog.js prefs.js timeEntryDialog.js

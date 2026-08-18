@@ -22,10 +22,11 @@ export default class GitLabIssuesPreferences extends ExtensionPreferences {
         // GitLab URL setting
         const urlRow = new Adw.EntryRow({
             title: _('GitLab Server URL'),
+            text: settings.get_string('gitlab-url'),
         });
-        urlRow.set_text(settings.get_string('gitlab-url'));
+        urlRow.set_tooltip_text(_('Include the protocol, for example https://gitlab.com. HTTPS is recommended.'));
         urlRow.connect('changed', (widget) => {
-            settings.set_string('gitlab-url', widget.get_text());
+            settings.set_string('gitlab-url', widget.get_text().trim().replace(/\/+$/, ''));
         });
         group.add(urlRow);
 

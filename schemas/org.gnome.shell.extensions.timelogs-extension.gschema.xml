@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist>
-  <schema id="org.gnome.shell.extensions.gitlab-time-tracker" path="/org/gnome/shell/extensions/gitlab-time-tracker/">
+  <schema id="org.gnome.shell.extensions.timelogs-extension" path="/org/gnome/shell/extensions/timelogs-extension/">
     <key name="gitlab-url" type="s">
       <default>''</default>
       <summary>GitLab Server URL</summary>
-      <description>The URL of your GitLab server (e.g., https://gitlab.com)</description>
+      <description>The complete URL of your GitLab server, including the protocol (e.g., https://gitlab.com). HTTPS is recommended.</description>
     </key>
     <key name="gitlab-token" type="s">
       <default>''</default>

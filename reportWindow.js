@@ -8,7 +8,7 @@ import Soup from 'gi://Soup?version=3.0';
 
 import {getDefaultProject, getProjectsCache, setProjectsCache} from './state.js';
 
-const SCHEMA_ID = 'org.gnome.shell.extensions.gitlab-time-tracker';
+const SCHEMA_ID = 'org.gnome.shell.extensions.timelogs-extension';
 const _ = text => text;
 
 function getSettings() {
@@ -51,8 +51,8 @@ class ReportWindow extends Gtk.ApplicationWindow {
         this._filterReloadId = null;
         this._reportRequestId = 0;
         this._logPath = GLib.build_filenamev([
-            GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_DOWNLOAD) || GLib.get_home_dir(),
-            'gitlab-time-tracker-report.log',
+            GLib.get_user_cache_dir(),
+            'timelogs-extension-report.log',
         ]);
         this._resetLog();
 
@@ -190,6 +190,10 @@ class ReportWindow extends Gtk.ApplicationWindow {
         const loadPage = (pagePath, collected = []) => {
             this._log(`GET ${pagePath}`);
             const message = Soup.Message.new('GET', `${url}/api/v4${pagePath}`);
+            if (!message) {
+                onError?.(_('Invalid GitLab server URL'));
+                return;
+            }
             message.request_headers.append('PRIVATE-TOKEN', token);
 
             this._httpSession.send_and_read_async(message, GLib.PRIORITY_DEFAULT, null, (session, result) => {
@@ -229,7 +233,16 @@ class ReportWindow extends Gtk.ApplicationWindow {
     _graphql(query, variables, onSuccess, onError = null) {
         const url = this._settings.get_string('gitlab-url');
         const token = this._settings.get_string('gitlab-token');
+        if (!url || !token) {
+            onError?.(_('Please configure the server URL and token in preferences'));
+            return;
+        }
+
         const message = Soup.Message.new('POST', `${url}/api/graphql`);
+        if (!message) {
+            onError?.(_('Invalid GitLab server URL'));
+            return;
+        }
         message.request_headers.append('PRIVATE-TOKEN', token);
         message.set_request_body_from_bytes(
             'application/json',
@@ -416,7 +429,7 @@ class ReportWindow extends Gtk.ApplicationWindow {
         this._statusLabel.label = _('Loading...');
         this._rawEntries = [];
         this._resetLog();
-        this._log(`Report project=${project.id} path=${project.path_with_namespace}`);
+        this._log(`Report project=${project.id}`);
         this._log(`Report period=${reportYear}-${String(reportMonth + 1).padStart(2, '0')}`);
 
         const startDate = `${reportYear}-${String(reportMonth + 1).padStart(2, '0')}-01`;
@@ -529,7 +542,7 @@ class ReportWindow extends Gtk.ApplicationWindow {
             }
         }
 
-        this._log(`Processed entries=${this._rawEntries.length} selected-user=${selectedAuthor || 'all'} total-seconds=${totalSeconds}`);
+        this._log(`Processed entries=${this._rawEntries.length} user-filtered=${Boolean(selectedAuthor)} total-seconds=${totalSeconds}`);
 
         this._reportData = { timeByLabel, timeByUserAndLabel, totalSeconds, issuesByLabel, tagFilters };
         this._updateChart();
@@ -797,7 +810,7 @@ class ReportWindow extends Gtk.ApplicationWindow {
     _resetLog() {
         try {
             Gio.File.new_for_path(this._logPath).replace_contents(
-                new TextEncoder().encode(`GitLab Time Tracker report log\nStarted: ${new Date().toISOString()}\n`),
+                new TextEncoder().encode(`Timelogs Extension report log\nStarted: ${new Date().toISOString()}\n`),
                 null,
                 false,
                 Gio.FileCreateFlags.REPLACE_DESTINATION,
@@ -831,7 +844,7 @@ class ReportWindow extends Gtk.ApplicationWindow {
 });
 
 const app = new Gtk.Application({
-    application_id: 'nc.gecka.GitlabTimeTracker.Report',
+    application_id: 'com.github.heno_dm.TimelogsExtension.Report',
     flags: Gio.ApplicationFlags.FLAGS_NONE,
 });
 

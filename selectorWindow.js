@@ -8,7 +8,7 @@ import Soup from 'gi://Soup?version=3.0';
 
 import {getDefaultProject, getProjectsCache, getRecentIssues, serializeIssue, serializeProject, setProjectsCache} from './state.js';
 
-const SCHEMA_ID = 'org.gnome.shell.extensions.gitlab-time-tracker';
+const SCHEMA_ID = 'org.gnome.shell.extensions.timelogs-extension';
 const _ = (text) => text;
 
 function getSettings() {
@@ -229,6 +229,10 @@ class SelectorWindow extends Gtk.ApplicationWindow {
         }
 
         const message = Soup.Message.new('GET', `${url}/api/v4${path}`);
+        if (!message) {
+            onError?.(_('Invalid GitLab server URL'));
+            return;
+        }
         message.request_headers.append('PRIVATE-TOKEN', token);
 
         this._httpSession.send_and_read_async(message, GLib.PRIORITY_DEFAULT, null, (session, result) => {
@@ -522,7 +526,7 @@ class SelectorWindow extends Gtk.ApplicationWindow {
 });
 
 const app = new Gtk.Application({
-    application_id: 'nc.gecka.GitlabTimeTracker.Selector',
+    application_id: 'com.github.heno_dm.TimelogsExtension.Selector',
     flags: Gio.ApplicationFlags.FLAGS_NONE,
 });
 
