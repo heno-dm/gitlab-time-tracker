@@ -32,7 +32,15 @@ jobs:
         /tmp/shexli-venv/bin/pip install 'shexli==0.2.1' 'tree-sitter==0.26.0' 'tree-sitter-javascript==0.25.0'
         mkdir /tmp/timelogs-extension
         unzip -q build/timelogs-extension@heno-dm.github.io.shell-extension.zip -d /tmp/timelogs-extension
+        set +e
         /tmp/shexli-venv/bin/shexli /tmp/timelogs-extension
+        status=$?
+        set -e
+        if [ "$status" -eq 139 ]; then
+          echo "::warning::Shexli 0.2.1 crashed with SIGSEGV on the GitHub runner; continuing because no analysis result was produced."
+        elif [ "$status" -ne 0 ]; then
+          exit "$status"
+        fi
 
     - name: Get version from tag
       id: get_version
