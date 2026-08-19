@@ -168,8 +168,8 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
         this._selectedIssue = issue;
         if (!getDefaultProject(this._settings))
             setDefaultProject(this._settings, project);
-        this._projectLabel.label.text = `${this._('Project')}: ${project.path_with_namespace}`;
-        this._issueLabel.label.text = `${this._('Issue')}: #${issue.iid} - ${issue.title.length > 40 ? issue.title.substring(0, 40) + '...' : issue.title}`;
+        this._projectLabel.label.set_text(`${this._('Project')}: ${project.path_with_namespace}`);
+        this._issueLabel.label.set_text(`${this._('Issue')}: #${issue.iid} - ${issue.title.length > 40 ? issue.title.substring(0, 40) + '...' : issue.title}`);
         this._openProjectButton.visible = true;
         this._openIssueButton.visible = true;
         this._saveTimerState();
@@ -257,10 +257,10 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
     _pauseTimer() {
         if (this._timerPaused) {
             this._timerPaused = false;
-            this._pauseButton.label.text = this._('Pause');
+            this._pauseButton.label.set_text(this._('Pause'));
         } else {
             this._timerPaused = true;
-            this._pauseButton.label.text = this._('Resume');
+            this._pauseButton.label.set_text(this._('Resume'));
         }
         this._updateIcon();
         this._saveTimerState();
@@ -324,7 +324,7 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
         const seconds = this._elapsedSeconds % 60;
 
         const timeString = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-        this._timerLabel.label.text = timeString;
+        this._timerLabel.label.set_text(timeString);
     }
 
     _updateButtonVisibility() {
@@ -516,16 +516,16 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
         this._updateIcon();
         // Update pause button text if paused
         if (this._timerPaused) {
-            this._pauseButton.label.text = this._('Resume');
+            this._pauseButton.label.set_text(this._('Resume'));
         }
         // Update project label
         if (this._selectedProject) {
-            this._projectLabel.label.text = `${this._('Project')}: ${this._selectedProject.path_with_namespace}`;
+            this._projectLabel.label.set_text(`${this._('Project')}: ${this._selectedProject.path_with_namespace}`);
             this._openProjectButton.visible = true;
         }
         // Update issue label
         if (this._selectedIssue) {
-            this._issueLabel.label.text = `${this._('Issue')}: #${this._selectedIssue.iid} - ${this._selectedIssue.title.length > 40 ? this._selectedIssue.title.substring(0, 40) + '...' : this._selectedIssue.title}`;
+            this._issueLabel.label.set_text(`${this._('Issue')}: #${this._selectedIssue.iid} - ${this._selectedIssue.title.length > 40 ? this._selectedIssue.title.substring(0, 40) + '...' : this._selectedIssue.title}`);
             this._openIssueButton.visible = true;
         }
     }

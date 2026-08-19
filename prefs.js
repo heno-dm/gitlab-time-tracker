@@ -104,7 +104,7 @@ export default class GitLabIssuesPreferences extends ExtensionPreferences {
         // Keyboard shortcuts configuration group
         const shortcutsGroup = new Adw.PreferencesGroup({
             title: _('Keyboard Shortcuts'),
-            description: _('Use accelerator syntax such as <Super><Alt>t. Leave empty to disable a shortcut.'),
+            description: _('Use accelerator syntax such as Super+Alt+T. Leave empty to disable a shortcut.'),
         });
         page.add(shortcutsGroup);
 

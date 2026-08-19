@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: timelogs-extension@heno-dm.github.io\n"
 "Report-Msgid-Bugs-To: https://github.com/heno-dm/gitlab-time-tracker/issues\n"
-"POT-Creation-Date: 2026-08-18 18:20+0200\n"
+"POT-Creation-Date: 2026-08-19 10:14+0200\n"
 "PO-Revision-Date: 2025-01-16 12:00+0000\n"
 "Last-Translator: \n"
 "Language-Team: Spanish\n"
@@ -16,141 +16,132 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: extension.js:68 extension.js:72 extension.js:203 extension.js:226
-#: extension.js:249 extension.js:306 extension.js:411
+#: extension.js:67 extension.js:71 extension.js:180 extension.js:203
+#: extension.js:226 extension.js:283 extension.js:388
 msgid "GitLab Issues Timer"
 msgstr "Temporizador de Issues GitLab"
 
-#: extension.js:68 extension.js:413 issueSelector.js:479 selectorWindow.js:227
+#: extension.js:67 extension.js:390 issueSelector.js:479 selectorWindow.js:227
 #: reportWindow.js:186 reportWindow.js:237 reportDialog.js:313
 #: reportDialog.js:514
 msgid "Please configure the server URL and token in preferences"
 msgstr ""
 "Por favor, configure la URL del servidor y el token en las preferencias"
 
-#: extension.js:72
+#: extension.js:71
 msgid "The GitLab server URL must include http:// or https://"
 msgstr ""
 
-#: extension.js:80
+#: extension.js:79
 msgid "Select project & issue"
 msgstr "Seleccionar proyecto e issue"
 
-#: extension.js:87
+#: extension.js:86
 msgid "Project: None"
 msgstr "Proyecto: Ninguno"
 
-#: extension.js:90
+#: extension.js:89
 msgid "Issue: None"
 msgstr "Issue: Ninguna"
 
-#: extension.js:94
+#: extension.js:93
 msgid "Open project in browser"
 msgstr "Abrir proyecto en el navegador"
 
-#: extension.js:99
+#: extension.js:98
 msgid "Open issue in browser"
 msgstr "Abrir issue en el navegador"
 
-#: extension.js:114
+#: extension.js:113
 msgid "Start"
 msgstr "Iniciar"
 
-#: extension.js:118 extension.js:283
+#: extension.js:117 extension.js:260
 msgid "Pause"
 msgstr "Pausar"
 
-#: extension.js:123
+#: extension.js:122
 msgid "Stop & Send"
 msgstr "Detener y enviar"
 
-#: extension.js:128 issueSelector.js:271 selectorWindow.js:207
+#: extension.js:127 issueSelector.js:271 selectorWindow.js:207
 #: timeEntryDialog.js:68
 msgid "Cancel"
 msgstr "Cancelar"
 
-#: extension.js:136
+#: extension.js:135
 msgid "Monthly Report"
 msgstr "Informe mensual"
 
-#: extension.js:143
+#: extension.js:142
 msgid "Settings"
 msgstr "Configuración"
 
-#: extension.js:167 extension.js:211 extension.js:219 extension.js:234
-#: extension.js:242 extension.js:413 extension.js:415 extension.js:418
-#: extension.js:441 issueSelector.js:484 issueSelector.js:490
-#: selectorWindow.js:246 selectorWindow.js:250 reportWindow.js:207
-#: reportWindow.js:225 reportWindow.js:259 reportWindow.js:274
-#: reportDialog.js:315 reportDialog.js:516 reportDialog.js:776
-#: reportDialog.js:824
-msgid "Error"
-msgstr "Error"
-
-#: extension.js:167
-msgid "Unable to open selector"
-msgstr "No se puede abrir el selector"
-
-#: extension.js:194 extension.js:556 issueSelector.js:94 selectorWindow.js:91
+#: extension.js:171 extension.js:523 issueSelector.js:94 selectorWindow.js:91
 #: reportDialog.js:66 reportDialog.js:692
 msgid "Project"
 msgstr "Proyecto"
 
-#: extension.js:195 extension.js:561 issueSelector.js:147 selectorWindow.js:124
+#: extension.js:172 extension.js:528 issueSelector.js:147 selectorWindow.js:124
 msgid "Issue"
 msgstr "Issue"
 
-#: extension.js:203
+#: extension.js:180
 msgid "No project selected"
 msgstr "Ningún proyecto seleccionado"
 
-#: extension.js:211
+#: extension.js:188 extension.js:196 extension.js:211 extension.js:219
+#: extension.js:390 extension.js:392 extension.js:395 issueSelector.js:484
+#: issueSelector.js:490 selectorWindow.js:246 selectorWindow.js:250
+#: reportWindow.js:207 reportWindow.js:225 reportWindow.js:259
+#: reportWindow.js:274 reportDialog.js:315 reportDialog.js:516
+#: reportDialog.js:776 reportDialog.js:824
+msgid "Error"
+msgstr "Error"
+
+#: extension.js:188
 msgid "Project URL not available"
 msgstr "URL del proyecto no disponible"
 
-#: extension.js:219 extension.js:242
+#: extension.js:196 extension.js:219
 msgid "Unable to open browser"
 msgstr "No se puede abrir el navegador"
 
-#: extension.js:226
+#: extension.js:203
 msgid "No issue selected"
 msgstr "Ninguna issue seleccionada"
 
-#: extension.js:234
+#: extension.js:211
 msgid "Issue URL not available"
 msgstr "URL de la issue no disponible"
 
-#: extension.js:249 issueSelector.js:911
+#: extension.js:226 issueSelector.js:911
 msgid "Please select a project and an issue"
 msgstr "Por favor, seleccione un proyecto y una issue"
 
-#: extension.js:286 extension.js:552
+#: extension.js:263 extension.js:519
 msgid "Resume"
 msgstr "Reanudar"
 
-#: extension.js:306
+#: extension.js:283
 msgid "Timer cancelled"
 msgstr "Temporizador cancelado"
 
-#: extension.js:411
+#: extension.js:388
 msgid "Time sent"
 msgstr "Tiempo enviado"
 
-#: extension.js:411
+#: extension.js:388
 msgid "on issue"
 msgstr "en la issue"
 
-#: extension.js:415
+#: extension.js:392
 msgid "Unable to send time"
 msgstr "No se puede enviar el tiempo"
 
-#: extension.js:418
+#: extension.js:395
 msgid "Error sending time"
 msgstr "Error al enviar el tiempo"
-
-#: extension.js:441
-msgid "Unable to open report"
-msgstr "No se puede abrir el informe"
 
 #: issueSelector.js:81 selectorWindow.js:72
 msgid "Select a project and an issue"
@@ -512,7 +503,7 @@ msgstr ""
 
 #: prefs.js:107
 msgid ""
-"Use accelerator syntax such as <Super><Alt>t. Leave empty to disable a "
+"Use accelerator syntax such as Super+Alt+T. Leave empty to disable a "
 "shortcut."
 msgstr ""
 
@@ -616,6 +607,12 @@ msgstr ""
 #: timeEntryDialog.js:73
 msgid "Send"
 msgstr ""
+
+#~ msgid "Unable to open selector"
+#~ msgstr "No se puede abrir el selector"
+
+#~ msgid "Unable to open report"
+#~ msgstr "No se puede abrir el informe"
 
 #~ msgid "Unable to load projects"
 #~ msgstr "No se pueden cargar los proyectos"
