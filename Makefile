@@ -52,8 +52,6 @@ build: clean
 	gnome-extensions pack -f \
 		--extra-source=avatarLoader.js \
 		--extra-source=state.js \
-		--extra-source=selectorWindow.js \
-		--extra-source=reportWindow.js \
 		--extra-source=timeEntryDialog.js \
 		--extra-source=metadata.json \
 		--extra-source=LICENSE \

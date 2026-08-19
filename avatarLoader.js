@@ -20,6 +20,10 @@ export class AvatarLoader {
      */
     _fetch(url, callback, auth = true) {
         const message = Soup.Message.new('GET', url);
+        if (!message) {
+            callback(-1, null);
+            return;
+        }
         if (auth)
             message.request_headers.append('PRIVATE-TOKEN', this._settings.get_string('gitlab-token'));
 
