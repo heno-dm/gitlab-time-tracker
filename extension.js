@@ -155,9 +155,8 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
         }
 
         try {
-            const gjs = GLib.find_program_in_path('gjs') || 'gjs';
             this._selectorProcess = Gio.Subprocess.new(
-                [gjs, '-m', `${this._extensionPath}/selectorWindow.js`],
+                ['gjs', '-m', `${this._extensionPath}/selectorWindow.js`],
                 Gio.SubprocessFlags.NONE
             );
             console.debug('GitLab Timer: Selector window launched successfully');
@@ -432,12 +431,10 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
         }
 
         try {
-            const gjs = GLib.find_program_in_path('gjs') || 'gjs';
-            const args = [gjs, '-m', `${this._extensionPath}/reportWindow.js`];
-            if (this._selectedProject?.id)
-                args.push(String(this._selectedProject.id));
-
-            Gio.Subprocess.new(args, Gio.SubprocessFlags.NONE);
+            Gio.Subprocess.new(
+                ['gjs', '-m', `${this._extensionPath}/reportWindow.js`, String(this._selectedProject?.id || '')],
+                Gio.SubprocessFlags.NONE
+            );
             console.debug('GitLab Timer: Report window launched successfully');
         } catch (e) {
             console.debug('GitLab Timer: Error opening report window: ' + e.message);

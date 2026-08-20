@@ -50,7 +50,6 @@ build: clean
 	# Create extension package
 	mkdir -p build/
 	gnome-extensions pack -f \
-		--extra-source=avatarLoader.js \
 		--extra-source=state.js \
 		--extra-source=selectorWindow.js \
 		--extra-source=reportWindow.js \
@@ -60,8 +59,6 @@ build: clean
 		--extra-source=README.md \
 		--extra-source=icons \
 		--extra-source=extension.js \
-		--extra-source=issueSelector.js \
-		--extra-source=reportDialog.js \
 		--extra-source=prefs.js \
 		--extra-source=stylesheet.css \
 		--extra-source=locale \
