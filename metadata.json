@@ -1,6 +1,6 @@
 {
   "name": "Timelogs Extension",
-  "description": "Track time spent on GitLab issues.\n\nThis extension is not affiliated, funded, or in any way associated with GitLab.\n\nTrack time spent on GitLab issues from the GNOME top bar. Select projects and issues, run a persistent timer, submit time directly to GitLab, and generate monthly reports.\n\nThis is an experimental personal fork of Gecka-Apps/gitlab-time-tracker. It was developed primarily through AI-assisted “vibe programming.” Updates and support are not guaranteed.\n\nRequires a GitLab personal access token with the api scope which will be stored cleartext in GSettings.",
+  "description": "Track time spent on GitLab issues.\n\nThis extension is not affiliated, funded, or in any way associated with GitLab.\n\nTrack time spent on GitLab issues from the GNOME top bar. Select projects and issues, run a persistent timer, submit time directly to GitLab, and generate monthly reports.\n\nThis is an experimental personal fork of Gecka-Apps/gitlab-time-tracker. It was developed primarily through AI-assisted programming. Updates and support are not guaranteed.\n\nRequires a GitLab personal access token with the api scope which will be stored cleartext in GSettings.",
   "uuid": "timelogs-extension@heno-dm.github.io",
   "shell-version": [
     "46",
