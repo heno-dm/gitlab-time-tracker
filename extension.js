@@ -231,12 +231,15 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
         this._timerPaused = false;
         this._timerStartTimestamp = Math.floor(Date.now() / 1000) - this._elapsedSeconds;
 
-        // Remove existing timeout before creating a new one
-        if (this._timerId) {
-            GLib.source_remove(this._timerId);
-            this._timerId = null;
-        }
+        this._startTimerSource();
 
+        this._updateButtonVisibility();
+        this._updateIcon();
+        this._saveTimerState();
+    }
+
+    _startTimerSource() {
+        this._removeTimerSource();
         this._timerId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 1, () => {
             if (!this._timerPaused) {
                 this._elapsedSeconds++;
@@ -248,10 +251,13 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
             }
             return GLib.SOURCE_CONTINUE;
         });
+    }
 
-        this._updateButtonVisibility();
-        this._updateIcon();
-        this._saveTimerState();
+    _removeTimerSource() {
+        if (this._timerId) {
+            GLib.source_remove(this._timerId);
+            this._timerId = null;
+        }
     }
 
     _pauseTimer() {
@@ -304,10 +310,7 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
     }
 
     _resetTimer() {
-        if (this._timerId) {
-            GLib.source_remove(this._timerId);
-            this._timerId = null;
-        }
+        this._removeTimerSource();
 
         this._timerRunning = false;
         this._timerPaused = false;
@@ -487,18 +490,7 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
                 console.debug('GitLab Timer: Timer restored in paused state');
             }
 
-            // Restart the timer interval
-            this._timerId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 1, () => {
-                if (!this._timerPaused) {
-                    this._elapsedSeconds++;
-                    // Save state every 5 seconds for crash/session end recovery
-                    if (this._elapsedSeconds % 5 === 0) {
-                        this._saveTimerState();
-                    }
-                }
-                this._updateTimerDisplay();
-                return GLib.SOURCE_CONTINUE;
-            });
+            this._startTimerSource();
 
             console.debug(`GitLab Timer: Timer restored with ${this._elapsedSeconds} seconds (paused: ${this._timerPaused})`);
         } catch (e) {
@@ -542,9 +534,7 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
         // Abort any pending HTTP requests
         this._httpSession.abort();
 
-        if (this._timerId) {
-            GLib.source_remove(this._timerId);
-        }
+        this._removeTimerSource();
         super.destroy();
     }
 });
