@@ -50,6 +50,7 @@ class ReportWindow extends Gtk.ApplicationWindow {
         this._currentMonth = new Date().getMonth();
         this._filterReloadId = null;
         this._reportRequestId = 0;
+        this._closed = false;
         this._logPath = GLib.build_filenamev([
             GLib.get_user_cache_dir(),
             'timelogs-extension-report.log',
@@ -199,6 +200,9 @@ class ReportWindow extends Gtk.ApplicationWindow {
             this._httpSession.send_and_read_async(message, GLib.PRIORITY_DEFAULT, null, (session, result) => {
                 try {
                     const bytes = session.send_and_read_finish(result);
+                    if (this._closed)
+                        return;
+
                     const response = new TextDecoder('utf-8').decode(bytes.get_data());
 
                     if (message.status_code !== 200) {
@@ -220,6 +224,9 @@ class ReportWindow extends Gtk.ApplicationWindow {
                         onSuccess(allData);
                     }
                 } catch (e) {
+                    if (this._closed)
+                        return;
+
                     this._log(`ERROR ${pagePath}: ${e.message}`);
                     if (onError)
                         onError(`${_('Error')}: ${e.message}`);
@@ -253,6 +260,9 @@ class ReportWindow extends Gtk.ApplicationWindow {
         this._httpSession.send_and_read_async(message, GLib.PRIORITY_DEFAULT, null, (session, result) => {
             try {
                 const bytes = session.send_and_read_finish(result);
+                if (this._closed)
+                    return;
+
                 const response = new TextDecoder('utf-8').decode(bytes.get_data());
                 if (message.status_code !== 200) {
                     this._log(`HTTP ${message.status_code} POST /api/graphql`);
@@ -270,6 +280,9 @@ class ReportWindow extends Gtk.ApplicationWindow {
 
                 onSuccess(payload.data);
             } catch (e) {
+                if (this._closed)
+                    return;
+
                 this._log(`GraphQL error: ${e.message}`);
                 onError?.(`${_('Error')}: ${e.message}`);
             }
@@ -833,6 +846,10 @@ class ReportWindow extends Gtk.ApplicationWindow {
     }
 
     close() {
+        if (this._closed)
+            return;
+
+        this._closed = true;
         if (this._filterReloadId) {
             GLib.source_remove(this._filterReloadId);
             this._filterReloadId = null;
@@ -840,6 +857,8 @@ class ReportWindow extends Gtk.ApplicationWindow {
         this._userPopover.unparent();
         this._httpSession.abort();
         super.close();
+        this._httpSession = null;
+        this._settings = null;
     }
 });
 

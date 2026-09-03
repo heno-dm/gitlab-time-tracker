@@ -51,6 +51,7 @@ class SelectorWindow extends Gtk.ApplicationWindow {
         this._issueLoading = false;
         this._issueReloadId = null;
         this._currentUser = null;
+        this._closed = false;
 
         this._buildUi();
         this._loadCurrentUser();
@@ -238,6 +239,9 @@ class SelectorWindow extends Gtk.ApplicationWindow {
         this._httpSession.send_and_read_async(message, GLib.PRIORITY_DEFAULT, null, (session, result) => {
             try {
                 const bytes = session.send_and_read_finish(result);
+                if (this._closed)
+                    return;
+
                 const response = new TextDecoder('utf-8').decode(bytes.get_data());
 
                 if (message.status_code === 200) {
@@ -246,7 +250,7 @@ class SelectorWindow extends Gtk.ApplicationWindow {
                     onError(`${_('Error')}: ${message.status_code}`);
                 }
             } catch (e) {
-                if (onError)
+                if (!this._closed && onError)
                     onError(`${_('Error')}: ${e.message}`);
             }
         });
@@ -516,12 +520,18 @@ class SelectorWindow extends Gtk.ApplicationWindow {
     }
 
     close() {
+        if (this._closed)
+            return;
+
+        this._closed = true;
         if (this._issueReloadId) {
             GLib.source_remove(this._issueReloadId);
             this._issueReloadId = null;
         }
         this._httpSession.abort();
         super.close();
+        this._httpSession = null;
+        this._settings = null;
     }
 });
 
