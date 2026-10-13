@@ -3,6 +3,7 @@
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
+import Gdk from 'gi://Gdk?version=4.0';
 import Gtk from 'gi://Gtk?version=4.0';
 import Soup from 'gi://Soup?version=3.0';
 
@@ -10,6 +11,27 @@ import {getDefaultProject, getProjectsCache, setProjectsCache} from './state.js'
 
 const SCHEMA_ID = 'org.gnome.shell.extensions.timelogs-extension';
 const _ = text => text;
+const CALENDAR_LEVELS = 8;
+const CALENDAR_CSS = `
+.report-calendar-header { font-weight: bold; opacity: 0.7; padding: 2px 0; }
+.report-calendar-day {
+    min-width: 64px;
+    min-height: 48px;
+    padding: 4px 6px;
+    border-radius: 6px;
+    border: 1px solid alpha(currentColor, 0.15);
+}
+.report-calendar-day.has-time { border-color: transparent; }
+.report-calendar-day.today { border: 2px solid rgb(53, 132, 228); }
+.report-calendar-day .hours { font-weight: bold; }
+.report-calendar-day .day-number { opacity: 0.8; }
+.report-calendar-day.level-5 .day-number, .report-calendar-day.level-6 .day-number, .report-calendar-day.level-7 .day-number { opacity: 1; }
+${Array.from({ length: CALENDAR_LEVELS }, (_unused, level) => {
+    const alpha = (0.15 + 0.85 * level / (CALENDAR_LEVELS - 1)).toFixed(2);
+    const color = level >= CALENDAR_LEVELS / 2 ? ' color: white;' : '';
+    return `.report-calendar-day.level-${level} { background-color: rgba(53, 132, 228, ${alpha});${color} }`;
+}).join('\n')}
+`;
 
 function getSettings() {
     const [scriptPath] = GLib.filename_from_uri(import.meta.url);
@@ -46,6 +68,7 @@ class ReportWindow extends Gtk.ApplicationWindow {
         this._users = [];
         this._selectedAuthor = '';
         this._visibleCategories = null;
+        this._viewMode = 'categories';
         this._currentYear = new Date().getFullYear();
         this._currentMonth = new Date().getMonth();
         this._filterReloadId = null;
@@ -63,6 +86,11 @@ class ReportWindow extends Gtk.ApplicationWindow {
     }
 
     _buildUi() {
+        const cssProvider = new Gtk.CssProvider();
+        cssProvider.load_from_string(CALENDAR_CSS);
+        Gtk.StyleContext.add_provider_for_display(
+            Gdk.Display.get_default(), cssProvider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
+
         this.set_titlebar(new Gtk.HeaderBar({
             title_widget: new Gtk.Label({ label: _('Monthly Time Report') }),
             show_title_buttons: true,
@@ -164,6 +192,22 @@ class ReportWindow extends Gtk.ApplicationWindow {
         const exportCsvButton = new Gtk.Button({ label: _('Export CSV') });
         exportCsvButton.connect('clicked', () => this._exportCSV());
         exportBox.append(exportCsvButton);
+
+        const viewBox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, halign: Gtk.Align.END, hexpand: true });
+        viewBox.add_css_class('linked');
+        this._categoriesViewButton = new Gtk.ToggleButton({ label: _('Categories'), active: true });
+        this._calendarViewButton = new Gtk.ToggleButton({ label: _('Calendar'), group: this._categoriesViewButton });
+        this._categoriesViewButton.connect('toggled', button => {
+            if (button.active)
+                this._setViewMode('categories');
+        });
+        this._calendarViewButton.connect('toggled', button => {
+            if (button.active)
+                this._setViewMode('calendar');
+        });
+        viewBox.append(this._categoriesViewButton);
+        viewBox.append(this._calendarViewButton);
+        exportBox.append(viewBox);
 
         this._statusLabel = new Gtk.Label({ label: _('Select a project'), xalign: 0 });
         root.append(this._statusLabel);
@@ -524,6 +568,7 @@ class ReportWindow extends Gtk.ApplicationWindow {
         const timeByLabel = {};
         const timeByUserAndLabel = {};
         const issuesByLabel = {};
+        const timeByDay = new Map(); // day of month (1-31) -> seconds
         let totalSeconds = 0;
 
         for (const entry of this._rawEntries) {
@@ -536,6 +581,11 @@ class ReportWindow extends Gtk.ApplicationWindow {
                 continue;
 
             totalSeconds += seconds;
+            const spentAt = entry.timelog.spent_at ? new Date(entry.timelog.spent_at) : null;
+            if (spentAt && spentAt.getFullYear() === this._currentYear && spentAt.getMonth() === this._currentMonth) {
+                const day = spentAt.getDate();
+                timeByDay.set(day, (timeByDay.get(day) || 0) + seconds);
+            }
             const labels = entry.issue.labels || [];
             const matchedLabels = tagFilters.length > 0
                 ? labels.filter(label => this._labelMatchesFilters(label, tagFilters))
@@ -557,9 +607,18 @@ class ReportWindow extends Gtk.ApplicationWindow {
 
         this._log(`Processed entries=${this._rawEntries.length} user-filtered=${Boolean(selectedAuthor)} total-seconds=${totalSeconds}`);
 
-        this._reportData = { timeByLabel, timeByUserAndLabel, totalSeconds, issuesByLabel, tagFilters };
+        this._reportData = { timeByLabel, timeByUserAndLabel, totalSeconds, issuesByLabel, tagFilters, timeByDay };
         this._updateChart();
         this._updateDetails();
+    }
+
+    _setViewMode(mode) {
+        if (this._viewMode === mode)
+            return;
+
+        this._viewMode = mode;
+        if (this._reportData)
+            this._updateChart();
     }
 
     _updateChart() {
@@ -571,6 +630,16 @@ class ReportWindow extends Gtk.ApplicationWindow {
             return;
         }
 
+        if (this._viewMode === 'calendar')
+            this._chartBox.append(this._buildCalendar());
+        else
+            this._buildCategoryBars();
+
+        const categorySeconds = Object.values(this._reportData.timeByLabel).reduce((sum, seconds) => sum + seconds, 0);
+        this._statusLabel.label = `${_('Total time')}: ${(this._reportData.totalSeconds / 3600).toFixed(1)}h | ${_('Category total')}: ${(categorySeconds / 3600).toFixed(1)}h`;
+    }
+
+    _buildCategoryBars() {
         const maxSeconds = Math.max(...Object.values(this._reportData.timeByLabel));
         for (const [label, seconds] of Object.entries(this._reportData.timeByLabel).sort((a, b) => b[1] - a[1])) {
             const row = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 8, valign: Gtk.Align.CENTER });
@@ -594,9 +663,69 @@ class ReportWindow extends Gtk.ApplicationWindow {
             }));
             this._chartBox.append(row);
         }
+    }
 
-        const categorySeconds = Object.values(this._reportData.timeByLabel).reduce((sum, seconds) => sum + seconds, 0);
-        this._statusLabel.label = `${_('Total time')}: ${(this._reportData.totalSeconds / 3600).toFixed(1)}h | ${_('Category total')}: ${(categorySeconds / 3600).toFixed(1)}h`;
+    _buildCalendar() {
+        const timeByDay = this._reportData.timeByDay;
+        const maxSeconds = timeByDay.size > 0 ? Math.max(...timeByDay.values()) : 0;
+        const weekStart = 1; // Monday
+        const daysInMonth = new Date(this._currentYear, this._currentMonth + 1, 0).getDate();
+        const firstWeekday = new Date(this._currentYear, this._currentMonth, 1).getDay();
+        const leadingBlanks = (firstWeekday - weekStart + 7) % 7;
+        const today = new Date();
+        const isCurrentMonth = today.getFullYear() === this._currentYear && today.getMonth() === this._currentMonth;
+
+        const grid = new Gtk.Grid({
+            row_spacing: 4,
+            column_spacing: 4,
+            row_homogeneous: true,
+            column_homogeneous: true,
+            hexpand: true,
+            margin_start: 6,
+            margin_end: 6,
+        });
+
+        // Weekday headers using locale names (2024-01-07 is a Sunday)
+        for (let column = 0; column < 7; column++) {
+            const weekday = (weekStart + column) % 7;
+            const header = new Gtk.Label({ label: GLib.DateTime.new_local(2024, 1, 7 + weekday, 0, 0, 0).format('%a') });
+            header.add_css_class('report-calendar-header');
+            grid.attach(header, column, 0, 1, 1);
+        }
+
+        for (let day = 1; day <= daysInMonth; day++) {
+            const index = leadingBlanks + day - 1;
+            const seconds = timeByDay.get(day) || 0;
+
+            const cell = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, hexpand: true, vexpand: true });
+            cell.add_css_class('report-calendar-day');
+            if (seconds > 0) {
+                const intensity = maxSeconds > 0 ? seconds / maxSeconds : 0;
+                const level = Math.min(CALENDAR_LEVELS - 1, Math.round(intensity * (CALENDAR_LEVELS - 1)));
+                cell.add_css_class('has-time');
+                cell.add_css_class(`level-${level}`);
+                cell.set_tooltip_text(`${(seconds / 3600).toFixed(2)}h`);
+            }
+            if (isCurrentMonth && day === today.getDate())
+                cell.add_css_class('today');
+
+            const dayLabel = new Gtk.Label({ label: String(day), xalign: 0 });
+            dayLabel.add_css_class('day-number');
+            cell.append(dayLabel);
+
+            const hoursLabel = new Gtk.Label({
+                label: seconds > 0 ? `${(seconds / 3600).toFixed(1)}h` : '',
+                xalign: 1,
+                vexpand: true,
+                valign: Gtk.Align.END,
+            });
+            hoursLabel.add_css_class('hours');
+            cell.append(hoursLabel);
+
+            grid.attach(cell, index % 7, 1 + Math.floor(index / 7), 1, 1);
+        }
+
+        return grid;
     }
 
     _updateDetails() {
