@@ -65,6 +65,8 @@ class ReportWindow extends Gtk.ApplicationWindow {
         this._selectedProject = null;
         this._preselectedProjectId = preselectedProjectId;
         this._rawEntries = [];
+        this._reportData = null;
+        this._reportReady = false;
         this._users = [];
         this._selectedAuthor = '';
         this._visibleCategories = null;
@@ -192,6 +194,9 @@ class ReportWindow extends Gtk.ApplicationWindow {
         const exportCsvButton = new Gtk.Button({ label: _('Export CSV') });
         exportCsvButton.connect('clicked', () => this._exportCSV());
         exportBox.append(exportCsvButton);
+        this._exportButtons = [exportMarkdownButton, exportCsvButton];
+        for (const button of this._exportButtons)
+            button.sensitive = false;
 
         const viewBox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, halign: Gtk.Align.END, hexpand: true });
         viewBox.add_css_class('linked');
@@ -478,6 +483,10 @@ class ReportWindow extends Gtk.ApplicationWindow {
 
     _loadReportData() {
         const requestId = ++this._reportRequestId;
+        this._reportReady = false;
+        this._reportData = null;
+        for (const button of this._exportButtons)
+            button.sensitive = false;
         const project = this._selectedProject;
         const reportYear = this._currentYear;
         const reportMonth = this._currentMonth;
@@ -543,6 +552,7 @@ class ReportWindow extends Gtk.ApplicationWindow {
             if (connection.pageInfo.hasNextPage) {
                 this._loadGraphqlTimelogs(requestId, project, startDate, endDate, connection.pageInfo.endCursor);
             } else {
+                this._reportReady = true;
                 this._processReportData();
             }
         }, error => {
@@ -563,6 +573,11 @@ class ReportWindow extends Gtk.ApplicationWindow {
     }
 
     _processReportData() {
+        // Filters may change during a paginated load or after an error. Neither
+        // case should make partial/failed data available for export.
+        if (!this._reportReady)
+            return;
+
         const selectedAuthor = this._selectedAuthor;
         const tagFilters = this._parseTagFilters(this._categoryEntry.get_text().trim());
         const timeByLabel = {};
@@ -608,6 +623,8 @@ class ReportWindow extends Gtk.ApplicationWindow {
         this._log(`Processed entries=${this._rawEntries.length} user-filtered=${Boolean(selectedAuthor)} total-seconds=${totalSeconds}`);
 
         this._reportData = { timeByLabel, timeByUserAndLabel, totalSeconds, issuesByLabel, tagFilters, timeByDay };
+        for (const button of this._exportButtons)
+            button.sensitive = true;
         this._updateChart();
         this._updateDetails();
     }

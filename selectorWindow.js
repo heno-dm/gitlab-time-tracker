@@ -49,8 +49,10 @@ class SelectorWindow extends Gtk.ApplicationWindow {
         this._issuePerPage = 100;
         this._issueHasMore = false;
         this._issueLoading = false;
+        this._issueRequestSerial = 0;
         this._issueReloadId = null;
         this._currentUser = null;
+        this._currentUserError = null;
         this._closed = false;
 
         this._buildUi();
@@ -219,7 +221,7 @@ class SelectorWindow extends Gtk.ApplicationWindow {
         this.set_default_widget(this._selectButton);
     }
 
-    _apiGet(path, onSuccess, onError = null) {
+    _apiGet(path, onSuccess, onError = null, collectPages = false) {
         const url = this._settings.get_string('gitlab-url');
         const token = this._settings.get_string('gitlab-token');
 
@@ -229,36 +231,53 @@ class SelectorWindow extends Gtk.ApplicationWindow {
             return;
         }
 
-        const message = Soup.Message.new('GET', `${url}/api/v4${path}`);
-        if (!message) {
-            onError?.(_('Invalid GitLab server URL'));
-            return;
-        }
-        message.request_headers.append('PRIVATE-TOKEN', token);
-
-        this._httpSession.send_and_read_async(message, GLib.PRIORITY_DEFAULT, null, (session, result) => {
-            try {
-                const bytes = session.send_and_read_finish(result);
-                if (this._closed)
-                    return;
-
-                const response = new TextDecoder('utf-8').decode(bytes.get_data());
-
-                if (message.status_code === 200) {
-                    onSuccess(JSON.parse(response));
-                } else if (onError) {
-                    onError(`${_('Error')}: ${message.status_code}`);
-                }
-            } catch (e) {
-                if (!this._closed && onError)
-                    onError(`${_('Error')}: ${e.message}`);
+        const loadPage = (page = null, collected = []) => {
+            const pagePath = page ? `${path}${path.includes('?') ? '&' : '?'}page=${page}` : path;
+            const message = Soup.Message.new('GET', `${url}/api/v4${pagePath}`);
+            if (!message) {
+                onError?.(_('Invalid GitLab server URL'));
+                return;
             }
-        });
+            message.request_headers.append('PRIVATE-TOKEN', token);
+
+            this._httpSession.send_and_read_async(message, GLib.PRIORITY_DEFAULT, null, (session, result) => {
+                try {
+                    const bytes = session.send_and_read_finish(result);
+                    if (this._closed)
+                        return;
+
+                    const response = new TextDecoder('utf-8').decode(bytes.get_data());
+
+                    if (message.status_code === 200) {
+                        const data = JSON.parse(response);
+                        const allData = collectPages ? collected.concat(data) : data;
+                        const nextPage = collectPages ? message.response_headers.get_one('X-Next-Page') : '';
+                        if (nextPage)
+                            loadPage(nextPage, allData);
+                        else
+                            onSuccess(allData);
+                    } else if (onError) {
+                        onError(`${_('Error')}: ${message.status_code}`);
+                    }
+                } catch (e) {
+                    if (!this._closed && onError)
+                        onError(`${_('Error')}: ${e.message}`);
+                }
+            });
+        };
+
+        loadPage();
     }
 
     _loadCurrentUser() {
         this._apiGet('/user', data => {
             this._currentUser = data;
+            if (this._settings.get_string('issue-filter-assignee').trim().toLowerCase() === 'me')
+                this._reloadIssues();
+        }, error => {
+            this._currentUserError = error;
+            if (this._settings.get_string('issue-filter-assignee').trim().toLowerCase() === 'me')
+                this._reloadIssues();
         });
     }
 
@@ -282,7 +301,7 @@ class SelectorWindow extends Gtk.ApplicationWindow {
         }, error => {
             if (cachedProjects.length === 0)
                 this._projectStatusLabel.label = error;
-        });
+        }, true);
     }
 
     _updateProjectList() {
@@ -326,7 +345,6 @@ class SelectorWindow extends Gtk.ApplicationWindow {
         while (child) {
             if (child._project?.id === this._defaultProject.id) {
                 this._projectList.select_row(child);
-                this._selectProject(child._project);
                 return;
             }
 
@@ -335,6 +353,11 @@ class SelectorWindow extends Gtk.ApplicationWindow {
     }
 
     _loadIssues(projectId) {
+        if (this._issueReloadId) {
+            GLib.source_remove(this._issueReloadId);
+            this._issueReloadId = null;
+        }
+
         this._issuePage = 1;
         this._issueHasMore = false;
         this._issues = [];
@@ -353,6 +376,15 @@ class SelectorWindow extends Gtk.ApplicationWindow {
         if (this._issueReloadId)
             GLib.source_remove(this._issueReloadId);
 
+        // Invalidate immediately, not after the debounce: old rows and responses
+        // must not remain selectable under the newly displayed filters.
+        this._issueRequestSerial++;
+        this._issues = [];
+        this._issueHasMore = false;
+        this._issueLoading = true;
+        this._updateIssueList();
+        this._issueStatusLabel.label = _('Loading issues...');
+
         this._issueReloadId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 300, () => {
             this._issueReloadId = null;
             this._reloadIssues();
@@ -368,20 +400,34 @@ class SelectorWindow extends Gtk.ApplicationWindow {
     }
 
     _loadIssuesPage(projectId, page, append) {
+        const requestSerial = ++this._issueRequestSerial;
+        if (this._settings.get_string('issue-filter-assignee').trim().toLowerCase() === 'me' && !this._currentUser) {
+            this._issueLoading = false;
+            this._loadMoreButton.sensitive = false;
+            this._issueStatusLabel.label = this._currentUserError || _('Loading current user...');
+            return;
+        }
+
         this._issueLoading = true;
         this._issueStatusLabel.label = _('Loading issues...');
         this._loadMoreButton.sensitive = false;
 
         this._apiGet(`/projects/${projectId}/issues?${this._buildIssueQuery(page)}`, data => {
+            if (requestSerial !== this._issueRequestSerial)
+                return;
+
             this._issueLoading = false;
             this._issuePage = page;
             this._issueHasMore = data.length === this._issuePerPage;
             this._issues = append ? this._issues.concat(data) : data;
             this._updateIssueList();
         }, error => {
+            if (requestSerial !== this._issueRequestSerial)
+                return;
+
             this._issueLoading = false;
-            this._issueStatusLabel.label = error;
             this._updateIssueList();
+            this._issueStatusLabel.label = error;
         });
     }
 

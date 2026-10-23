@@ -26,6 +26,9 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
         this._extensionPath = extension.path;
         this._httpSession = new Soup.Session();
         this._selectorProcess = null;
+        this._timeEntryDialog = null;
+        this._sendingTime = false;
+        this._destroyed = false;
         this._selectionChangedId = this._settings.connect('changed::selection-state', () => this._applySelectionState());
 
         // Timer state
@@ -148,6 +151,11 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
     }
 
     _openIssueSelector() {
+        if (this._timerRunning) {
+            Main.notify(this._('GitLab Issues Timer'), this._('Submit or cancel the current timer before selecting another issue'));
+            return;
+        }
+
         console.debug('GitLab Timer: Opening issue selector...');
         if (!this._validateSettings()) {
             console.debug('GitLab Timer: Settings validation failed');
@@ -186,6 +194,12 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
     }
 
     _setSelectedIssue(project, issue) {
+        // A selector opened before the timer started may still return a selection.
+        if (this._timerRunning) {
+            Main.notify(this._('GitLab Issues Timer'), this._('Submit or cancel the current timer before selecting another issue'));
+            return;
+        }
+
         this._selectedProject = project;
         this._selectedIssue = issue;
         if (!getDefaultProject(this._settings))
@@ -283,8 +297,12 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
     }
 
     _pauseTimer() {
+        if (this._sendingTime || this._timeEntryDialog)
+            return;
+
         if (this._timerPaused) {
             this._timerPaused = false;
+            this._timerStartTimestamp = Math.floor(Date.now() / 1000) - this._elapsedSeconds;
             this._pauseButton.label.set_text(this._('Pause'));
         } else {
             this._timerPaused = true;
@@ -295,18 +313,33 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
     }
 
     _stopTimer() {
-        if (!this._timerRunning) return;
+        if (!this._timerRunning || this._sendingTime || this._timeEntryDialog)
+            return;
+
+        // Freeze the session while editing/submitting. Cancel and failures leave it
+        // paused so no tracked time is lost and the same duration can be retried.
+        if (!this._timerPaused)
+            this._pauseTimer();
 
         const duration = this._formatGitLabDuration(this._elapsedSeconds);
         const dialog = new TimeEntryDialog(this._, this._selectedProject, this._selectedIssue, duration, (editedDuration, comment) => {
             this._sendTimeToGitLab(editedDuration, comment);
-            this._resetTimer();
+        });
+        this._timeEntryDialog = dialog;
+        dialog.connect('closed', () => {
+            this._timeEntryDialog = null;
         });
 
-        dialog.open();
+        if (!dialog.open()) {
+            this._timeEntryDialog = null;
+            dialog.destroy();
+        }
     }
 
     _cancelTimer() {
+        if (this._sendingTime || this._timeEntryDialog)
+            return;
+
         this._resetTimer();
         Main.notify(this._('GitLab Issues Timer'), this._('Timer cancelled'));
     }
@@ -353,10 +386,14 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
     }
 
     _updateButtonVisibility() {
+        this._pauseButton.label.set_text(this._timerPaused ? this._('Resume') : this._('Pause'));
         this._startButton.visible = !this._timerRunning;
         this._pauseButton.visible = this._timerRunning;
         this._stopButton.visible = this._timerRunning;
         this._cancelButton.visible = this._timerRunning;
+        this._pauseButton.setSensitive(!this._sendingTime);
+        this._stopButton.setSensitive(!this._sendingTime);
+        this._cancelButton.setSensitive(!this._sendingTime);
     }
 
     _updateIcon() {
@@ -384,6 +421,9 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
     }
 
     _sendTimeToGitLab(duration, comment) {
+        if (this._sendingTime || !this._validateSettings())
+            return;
+
         const url = this._settings.get_string('gitlab-url');
         const token = this._settings.get_string('gitlab-token');
         const project = this._selectedProject;
@@ -398,29 +438,50 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
             .join('&');
         const apiUrl = `${url}/api/v4/projects/${project.id}/issues/${issue.iid}/add_spent_time?${query}`;
 
-        const message = Soup.Message.new('POST', apiUrl);
-        message.request_headers.append('PRIVATE-TOKEN', token);
+        this._sendingTime = true;
+        this._updateButtonVisibility();
 
-        this._httpSession.send_and_read_async(
-            message,
-            GLib.PRIORITY_DEFAULT,
-            null,
-            (session, result) => {
-                try {
-                    session.send_and_read_finish(result);
-                    if (message.status_code === 201 || message.status_code === 200) {
-                        addRecentIssue(this._settings, project, issue);
-                        Main.notify(this._('GitLab Issues Timer'), `${this._('Time sent')}: ${duration} ${this._('on issue')} #${issue.iid}`);
-                    } else if (message.status_code === 401 || message.status_code === 403) {
-                        Main.notify(this._('Error'), this._('Please configure the server URL and token in preferences'));
-                    } else {
-                        Main.notify(this._('Error'), `${this._('Unable to send time')}: ${message.status_code}`);
+        try {
+            const message = Soup.Message.new('POST', apiUrl);
+            if (!message)
+                throw new Error(this._('Invalid GitLab server URL'));
+            message.request_headers.append('PRIVATE-TOKEN', token);
+
+            this._httpSession.send_and_read_async(
+                message,
+                GLib.PRIORITY_DEFAULT,
+                null,
+                (session, result) => {
+                    try {
+                        session.send_and_read_finish(result);
+                        if (this._destroyed)
+                            return;
+
+                        if (message.status_code === 201 || message.status_code === 200) {
+                            this._resetTimer();
+                            addRecentIssue(this._settings, project, issue);
+                            Main.notify(this._('GitLab Issues Timer'), `${this._('Time sent')}: ${duration} ${this._('on issue')} #${issue.iid}`);
+                        } else if (message.status_code === 401 || message.status_code === 403) {
+                            Main.notify(this._('Error'), this._('Please configure the server URL and token in preferences'));
+                        } else {
+                            Main.notify(this._('Error'), `${this._('Unable to send time')}: ${message.status_code}`);
+                        }
+                    } catch (e) {
+                        if (!this._destroyed)
+                            Main.notify(this._('Error'), `${this._('Error sending time')}: ${e.message}`);
+                    } finally {
+                        if (!this._destroyed) {
+                            this._sendingTime = false;
+                            this._updateButtonVisibility();
+                        }
                     }
-                } catch (e) {
-                    Main.notify(this._('Error'), `${this._('Error sending time')}: ${e.message}`);
                 }
-            }
-        );
+            );
+        } catch (e) {
+            this._sendingTime = false;
+            this._updateButtonVisibility();
+            Main.notify(this._('Error'), `${this._('Error sending time')}: ${e.message}`);
+        }
     }
 
     _openReport() {
@@ -452,6 +513,7 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
                 paused: this._timerPaused,
                 startTimestamp: this._timerStartTimestamp,
                 elapsedSeconds: this._elapsedSeconds,
+                savedAt: Math.floor(Date.now() / 1000),
                 project: projectData,
                 issue: issueData
             };
@@ -504,9 +566,13 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
                 this._timerPaused = false;
 
                 if (countTimeWhenLocked) {
-                    // Count time elapsed since timer was started
+                    // Only add downtime since the saved active interval. Older
+                    // states lack savedAt: keep their saved duration rather than
+                    // reintroducing pauses through the original start timestamp.
                     const now = Math.floor(Date.now() / 1000);
-                    this._elapsedSeconds = now - state.startTimestamp;
+                    const downtime = !state.paused && Number.isFinite(state.savedAt)
+                        ? Math.max(0, now - state.savedAt) : 0;
+                    this._elapsedSeconds = state.elapsedSeconds + downtime;
                     console.debug(`GitLab Timer: Timer resumed with calculated time: ${this._elapsedSeconds} seconds`);
                 } else {
                     // Use saved elapsed time (don't count time during lock/shutdown)
@@ -520,6 +586,7 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
                 console.debug('GitLab Timer: Timer restored in paused state');
             }
 
+            this._timerStartTimestamp = Math.floor(Date.now() / 1000) - this._elapsedSeconds;
             this._startTimerSource();
 
             console.debug(`GitLab Timer: Timer restored with ${this._elapsedSeconds} seconds (paused: ${this._timerPaused})`);
@@ -554,6 +621,11 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
 
     destroy() {
         console.debug('GitLab Timer: destroy() called');
+        this._destroyed = true;
+        if (this._timeEntryDialog) {
+            this._timeEntryDialog.destroy();
+            this._timeEntryDialog = null;
+        }
 
         // Save timer state before destroying
         this._saveTimerState();

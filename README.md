@@ -64,6 +64,8 @@ Create a token from your GitLab user preferences under **Access Tokens**. The to
 4. Pause or resume the timer without losing elapsed time.
 5. Use **Stop & Send** to submit the elapsed time to GitLab, or **Cancel** to discard it.
 
+**Stop & Send** pauses the timer while you edit and submit the entry. Cancelling the dialog or a failed submission leaves the timer paused, with its tracked time preserved for retry or resume. Issue selection is blocked until the current timer is submitted or cancelled.
+
 GitLab accepts submitted durations in forms such as `30m`, `2h`, or `2h30m`. The minimum submitted duration is one minute.
 
 ### Issue Filters
@@ -104,7 +106,7 @@ Entries without a matching label are grouped under **Other**.
 
 ## Technical Overview
 
-This is a GNOME Shell extension written in JavaScript and loaded directly by GNOME Shell. It is not a Node.js application and has no package manifest or JavaScript test runner.
+This is a GNOME Shell extension written in JavaScript and loaded directly by GNOME Shell. It is not a Node.js application and has no package manifest or external test framework.
 
 - `extension.js`: runtime entry point and top-bar integration
 - `prefs.js`: preferences entry point
@@ -126,6 +128,9 @@ Required build tools include `make`, `gnome-extensions`, `glib-compile-schemas`,
 ```bash
 # Compile schemas and translations, then create the extension archive
 make build
+
+# Run headless regression checks (requires gjs, no GNOME session needed)
+make test-regressions
 
 # Build and install into the current user's GNOME extensions directory
 make install
