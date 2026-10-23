@@ -272,6 +272,34 @@ test('debouncing invalidates pending pagination immediately', () => {
     equal(picker._issues, [{iid: 200}]);
 });
 
+test('issue queries use ascending board position on every page and preserve filters', () => {
+    const {instance: picker} = selector({'issue-filter-state': 'closed',
+        'issue-filter-assignee': 'alice', 'issue-filter-search': 'fix & test',
+        'issue-filter-labels': 'doing,bug'});
+    for (const page of [1, 2]) {
+        const params = Object.fromEntries(picker._buildIssueQuery(page).split('&').map(pair =>
+            pair.split('=').map(value => decodeURIComponent(value))));
+        equal(params, {state: 'closed', order_by: 'relative_position', sort: 'asc',
+            per_page: '100', page: String(page), search: 'fix & test', in: 'title,description',
+            assignee_username: 'alice', labels: 'doing,bug'});
+    }
+});
+
+test('issue pagination preserves board order rather than sorting by issue ID', () => {
+    const {instance: picker, pending, respond} = selector();
+    picker._selectProject({id: 1});
+    const firstPage = Array.from({length: 100}, (_unused, index) => ({iid: 500 - index}));
+    respond(0, firstPage);
+    picker._loadMoreIssues();
+    for (const {message} of pending) {
+        assert(message.url.includes('order_by=relative_position'));
+        assert(message.url.includes('sort=asc'));
+    }
+    const secondPage = [{iid: 2}, {iid: 1000}, {iid: 1}];
+    respond(1, secondPage);
+    equal(picker._issues, firstPage.concat(secondPage));
+});
+
 test('project pagination caches all pages only after completion', () => {
     const network = selector();
     network.instance._loadProjects();

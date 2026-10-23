@@ -80,6 +80,8 @@ Filtering is performed by GitLab's API, which avoids loading every issue in larg
 
 Issue filters persist between selector sessions.
 
+Issues follow GitLab's manual board order (relative position, top to bottom), rather than issue number or creation date. Filtering and loading more results preserve that order. Boards sorted by other fields, such as due date, may display a different order.
+
 ### Default Shortcuts
 
 - `<Super><Alt>t`: Start, pause, or resume; open issue selection when none is selected

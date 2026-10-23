@@ -434,6 +434,9 @@ class SelectorWindow extends Gtk.ApplicationWindow {
     _buildIssueQuery(page) {
         const params = [
             ['state', this._getIssueState()],
+            // Match the manual top-to-bottom ranking used by GitLab boards.
+            ['order_by', 'relative_position'],
+            ['sort', 'asc'],
             ['per_page', String(this._issuePerPage)],
             ['page', String(page)],
         ];
