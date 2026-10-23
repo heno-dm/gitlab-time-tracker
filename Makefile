@@ -1,23 +1,23 @@
 NAME = timelogs-extension
 UUID = $(NAME)@heno-dm.github.io
 EXTENSION_PATH = $(HOME)/.local/share/gnome-shell/extensions/$(UUID)
+SOURCES = extension.js prefs.js $(wildcard core/*.js) $(wildcard ui/*.js) $(wildcard report/*.js)
 
-.PHONY: build install pot clean remove test-shell test-prefs test-regressions test-selector-ui help
+.PHONY: build install pot clean remove test test-shell test-prefs help
 
 
 help:
-	@echo "GitLab Time Tracking Extension - Makefile"
+	@echo "Timelogs Extension - Makefile"
 	@echo ""
 	@echo "Available targets:"
 	@echo "  build       - Build the extension package"
 	@echo "  install     - Install the extension"
+	@echo "  test        - Run headless GJS checks (core/ and report/ modules)"
 	@echo "  pot         - Update translation templates and merge with existing translations"
 	@echo "  clean       - Clean build artifacts"
 	@echo "  remove      - Remove installed extension"
 	@echo "  test-shell  - Test extension in nested GNOME Shell"
 	@echo "  test-prefs  - Test extension preferences"
-	@echo "  test-regressions - Run headless GJS regression checks"
-	@echo "  test-selector-ui - Smoke-test the GTK search window (requires a display)"
 	@echo "  help        - Show this help message"
 
 
@@ -52,18 +52,13 @@ build: clean
 	# Create extension package
 	mkdir -p build/
 	gnome-extensions pack -f \
-		--extra-source=state.js \
-		--extra-source=selectorWindow.js \
-		--extra-source=reportWindow.js \
-		--extra-source=timeEntryDialog.js \
-		--extra-source=metadata.json \
+		--extra-source=core \
+		--extra-source=ui \
+		--extra-source=report \
+		--extra-source=icons \
+		--extra-source=locale \
 		--extra-source=LICENSE \
 		--extra-source=README.md \
-		--extra-source=icons \
-		--extra-source=extension.js \
-		--extra-source=prefs.js \
-		--extra-source=stylesheet.css \
-		--extra-source=locale \
 		--podir=po \
 		--schema=schemas/org.gnome.shell.extensions.$(NAME).gschema.xml \
 		-o build/
@@ -83,6 +78,10 @@ install: build remove
 	@echo "  - Wayland: Log out and log back in"
 
 
+test:
+	gjs -m tests/run.js
+
+
 pot:
 	@echo "Updating translation templates..."
 	@# Extract strings from JavaScript files
@@ -92,8 +91,9 @@ pot:
 		--package-version=$(shell git describe --tags --always 2>/dev/null || echo "1.0.0") \
 		--msgid-bugs-address="https://github.com/heno-dm/gitlab-time-tracker/issues" \
 		--keyword=_ \
+		--keyword=gettext \
 		--add-comments=TRANSLATORS \
-		extension.js issueSelector.js selectorWindow.js reportWindow.js reportDialog.js prefs.js timeEntryDialog.js
+		$(SOURCES)
 	@echo "✓ Template updated: po/$(UUID).pot"
 
 	@# Update LINGUAS file
@@ -110,20 +110,12 @@ pot:
 	for lang in $$(cat LINGUAS 2>/dev/null); do \
 		echo "  Merging $$lang..."; \
 		if [ -f $$lang.po ]; then \
-			msgmerge --update $$lang.po $(UUID).pot; \
+			msgmerge --update --backup=none $$lang.po $(UUID).pot; \
 		else \
 			msginit --no-translator --locale=$$lang --input=$(UUID).pot -o $$lang.po; \
 		fi \
 	done
 	@echo "✓ Translations merged successfully"
-
-
-test-regressions:
-	gjs -m tests/regressions.js
-
-
-test-selector-ui:
-	gjs -m tests/selector-ui.js
 
 
 test-shell: install

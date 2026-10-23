@@ -1,48 +1,32 @@
-/* GitLab Issues Timer Extension Stylesheet */
+/* Timelogs Extension — layout-only rules; colours and widgets come from the Shell theme. */
 
-.gitlab-timer-label {
-    font-size: 18px;
-    font-weight: bold;
+.timelogs-subtitle {
+    font-size: 0.9em;
+    opacity: 0.7;
 }
 
-.gitlab-work-title {
-    max-width: 28em;
-    text-align: left;
+.timelogs-row-buttons {
+    spacing: 4px;
 }
 
-/* Theme-aware icon coloring */
-.system-status-icon {
-    icon-size: 16px;
-    -st-icon-style: symbolic;
+.timelogs-row-buttons .icon-button {
+    padding: 4px;
 }
 
-/* Issue selector dialog */
-.gitlab-list-container {
-    height: 180px;
+.timelogs-submit-form {
+    spacing: 8px;
+    min-width: 420px;
 }
 
-.gitlab-project-list,
-.gitlab-issue-list {
-    padding-right: 6px;
+.timelogs-submit-row {
+    spacing: 12px;
 }
 
-.gitlab-empty-label {
-    padding: 20px;
-    font-style: italic;
+.timelogs-submit-label {
+    min-width: 7em;
 }
 
-/* Report dialog */
-.gitlab-report-project-list {
-    height: 200px;
-}
-
-.gitlab-chart-container {
-    height: 300px;
-    margin-bottom: 15px;
-}
-
-.gitlab-chart-bar {
-    background-color: #3584e4;
-    background-color: -st-accent-color;
-    border-radius: 3px;
+.timelogs-error-label {
+    color: #e01b24;
+    font-size: 0.9em;
 }

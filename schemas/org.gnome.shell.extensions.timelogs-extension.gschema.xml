@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist>
   <schema id="org.gnome.shell.extensions.timelogs-extension" path="/org/gnome/shell/extensions/timelogs-extension/">
+    <key name="settings-version" type="i">
+      <default>0</default>
+      <summary>Settings version</summary>
+      <description>Bumped after migrations have run; used to keep migrations idempotent</description>
+    </key>
     <key name="gitlab-url" type="s">
       <default>''</default>
       <summary>GitLab Server URL</summary>
@@ -8,98 +13,109 @@
     </key>
     <key name="gitlab-token" type="s">
       <default>''</default>
-      <summary>GitLab Access Token</summary>
-      <description>Personal access token for GitLab API authentication</description>
+      <summary>GitLab Access Token (fallback storage)</summary>
+      <description>Personal access token used only when libsecret is unavailable; emptied once the token is stored in the keyring</description>
     </key>
-    <key name="report-tags-filter" type="s">
-      <default>''</default>
-      <summary>Report Tags Filter</summary>
-      <description>Comma-separated list of tags or regex patterns to filter in reports (e.g., "Maintenance corrective,^Maintenance.*$"). Leave empty to show all tags.</description>
-    </key>
-    <key name="timer-state" type="s">
-      <default>'{}'</default>
-      <summary>Timer State</summary>
-      <description>Versioned JSON containing the current timer and paused issue sessions, preserved across lock, logout and restart</description>
-    </key>
-    <key name="recent-issues" type="s">
+    <key name="tracked-projects" type="s">
       <default>'[]'</default>
-      <summary>Recent Issues</summary>
-      <description>JSON list containing the last issues that received tracked time</description>
-    </key>
-    <key name="selection-state" type="s">
-      <default>'{}'</default>
-      <summary>Selection State</summary>
-      <description>JSON object used by the external selector window to send the selected project and issue back to the extension</description>
-    </key>
-    <key name="default-project" type="s">
-      <default>'{}'</default>
-      <summary>Default Project</summary>
-      <description>JSON object containing the default project used by the issue selector</description>
+      <summary>Tracked projects</summary>
+      <description>JSON array of projects whose issues appear in the Doing queue and in search</description>
     </key>
     <key name="doing-labels" type="s">
       <default>'doing'</default>
       <summary>Doing queue labels</summary>
-      <description>Comma-separated labels identifying the Doing column. The queue shows open issues assigned to the current user in the default project.</description>
+      <description>Comma-separated labels identifying the Doing column. The queue shows open issues assigned to the current user in the tracked projects.</description>
+    </key>
+    <key name="lock-behaviour" type="s">
+      <default>'pause'</default>
+      <summary>Timer behaviour when the screen locks</summary>
+      <description>One of pause, keep-counting or resume-on-unlock</description>
+    </key>
+    <key name="show-panel-time" type="b">
+      <default>true</default>
+      <summary>Show elapsed time in the top bar</summary>
+      <description>Show the elapsed time of the active session next to the indicator icon</description>
+    </key>
+    <key name="timer-state" type="s">
+      <default>'{}'</default>
+      <summary>Timer State</summary>
+      <description>Versioned JSON containing all issue sessions, preserved across lock, logout and restart</description>
+    </key>
+    <key name="queue-cache" type="s">
+      <default>'{}'</default>
+      <summary>Doing queue cache</summary>
+      <description>JSON object with the last known Doing queue so the menu renders without waiting for the network</description>
+    </key>
+    <key name="cached-user" type="s">
+      <default>'{}'</default>
+      <summary>Cached GitLab user</summary>
+      <description>JSON object with the authenticated user for offline start</description>
     </key>
     <key name="projects-cache" type="s">
       <default>'{}'</default>
       <summary>Projects Cache</summary>
       <description>JSON object containing the cached GitLab project list</description>
     </key>
-    <key name="resume-on-unlock" type="b">
-      <default>false</default>
-      <summary>Resume timer when screen is unlocked</summary>
-      <description>When enabled, the timer will automatically resume when the screen is unlocked</description>
+    <key name="report-tags-filter" type="s">
+      <default>''</default>
+      <summary>Report Tags Filter</summary>
+      <description>Comma-separated list of tags or regex patterns to filter in reports (e.g., "Maintenance corrective,^Maintenance.*$"). Leave empty to show all tags.</description>
     </key>
-    <key name="count-time-when-locked" type="b">
-      <default>false</default>
-      <summary>Count elapsed time when locked</summary>
-      <description>When enabled (and resume-on-unlock is enabled), the elapsed time during lock/logout/shutdown will be counted</description>
+    <key name="report-view" type="s">
+      <default>'categories'</default>
+      <summary>Last report view</summary>
+      <description>Either categories or calendar</description>
+    </key>
+    <key name="report-user" type="s">
+      <default>''</default>
+      <summary>Last report user filter</summary>
+      <description>Username filter in the report window; empty means everyone</description>
+    </key>
+    <key name="report-export-format" type="s">
+      <default>'csv'</default>
+      <summary>Last report export format</summary>
+      <description>Either csv or md</description>
     </key>
     <key name="toggle-timer-shortcut" type="as">
       <default>['&lt;Super&gt;&lt;Alt&gt;t']</default>
       <summary>Toggle timer shortcut</summary>
-      <description>Keyboard shortcut to start, pause, resume, or select an issue for the timer</description>
+      <description>Keyboard shortcut to pause or resume the timer, or open the menu when nothing is tracked</description>
     </key>
     <key name="stop-send-shortcut" type="as">
       <default>['&lt;Super&gt;&lt;Alt&gt;s']</default>
-      <summary>Stop and send shortcut</summary>
-      <description>Keyboard shortcut to stop the timer and send tracked time to GitLab</description>
+      <summary>Submit time shortcut</summary>
+      <description>Keyboard shortcut to submit the active session's time to GitLab</description>
     </key>
     <key name="cancel-timer-shortcut" type="as">
       <default>['&lt;Super&gt;&lt;Alt&gt;c']</default>
-      <summary>Cancel timer shortcut</summary>
-      <description>Keyboard shortcut to cancel the current timer without sending time</description>
+      <summary>Discard timer shortcut</summary>
+      <description>Keyboard shortcut to discard the active session (undo is offered)</description>
     </key>
     <key name="select-issue-shortcut" type="as">
       <default>['&lt;Super&gt;&lt;Alt&gt;i']</default>
-      <summary>Select issue shortcut</summary>
-      <description>Keyboard shortcut to open the project and issue selector</description>
+      <summary>Search issues shortcut</summary>
+      <description>Keyboard shortcut to open the menu with the search entry focused</description>
     </key>
     <key name="monthly-report-shortcut" type="as">
       <default>['&lt;Super&gt;&lt;Alt&gt;r']</default>
       <summary>Monthly report shortcut</summary>
-      <description>Keyboard shortcut to open the monthly report dialog</description>
+      <description>Keyboard shortcut to open the monthly report window</description>
     </key>
-    <key name="issue-filter-search" type="s">
-      <default>''</default>
-      <summary>Issue search filter</summary>
-      <description>Search text used when loading issues from GitLab</description>
+    <!-- Legacy keys kept for one release so migrations can read them. -->
+    <key name="default-project" type="s">
+      <default>'{}'</default>
+      <summary>Default Project (legacy)</summary>
+      <description>Migrated into tracked-projects</description>
     </key>
-    <key name="issue-filter-state" type="s">
-      <default>'opened'</default>
-      <summary>Issue state filter</summary>
-      <description>Issue state used when loading issues from GitLab</description>
+    <key name="resume-on-unlock" type="b">
+      <default>false</default>
+      <summary>Resume timer when screen is unlocked (legacy)</summary>
+      <description>Migrated into lock-behaviour</description>
     </key>
-    <key name="issue-filter-assignee" type="s">
-      <default>'me'</default>
-      <summary>Issue assignee filter</summary>
-      <description>Assignee username, me, or None used when loading issues from GitLab</description>
-    </key>
-    <key name="issue-filter-labels" type="s">
-      <default>'doing'</default>
-      <summary>Issue labels filter</summary>
-      <description>Comma-separated labels used when loading issues from GitLab</description>
+    <key name="count-time-when-locked" type="b">
+      <default>false</default>
+      <summary>Count elapsed time when locked (legacy)</summary>
+      <description>Migrated into lock-behaviour</description>
     </key>
   </schema>
 </schemalist>

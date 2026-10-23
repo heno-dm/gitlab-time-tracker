@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: timelogs-extension@heno-dm.github.io\n"
 "Report-Msgid-Bugs-To: https://github.com/heno-dm/gitlab-time-tracker/issues\n"
-"POT-Creation-Date: 2026-10-23 13:58+0200\n"
+"POT-Creation-Date: 2026-10-23 15:15+0200\n"
 "PO-Revision-Date: 2025-01-16 12:00+0000\n"
 "Last-Translator: \n"
 "Language-Team: French\n"
@@ -16,715 +16,802 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
-#: extension.js:79 extension.js:83 extension.js:178 extension.js:221
-#: extension.js:372 extension.js:395 extension.js:421 extension.js:511
-#: extension.js:644
-msgid "GitLab Issues Timer"
-msgstr "GitLab Timer Issues"
-
-#: extension.js:79 extension.js:309 extension.js:646 issueSelector.js:479
-#: selectorWindow.js:290 reportWindow.js:236 reportWindow.js:293
-#: reportDialog.js:313 reportDialog.js:514
-msgid "Please configure the server URL and token in preferences"
-msgstr "Veuillez configurer l'URL du serveur et le token dans les préférences"
-
-#: extension.js:83
-msgid "The GitLab server URL must include http:// or https://"
+#: extension.js:44 extension.js:113 ui/actions.js:129 ui/actions.js:135
+msgid "Timelogs"
 msgstr ""
 
-#: extension.js:90 extension.js:560
-#, fuzzy
-msgid "No active timer"
-msgstr "Annuler"
-
-#: extension.js:93
-msgid "Find another issue…"
-msgstr ""
-
-#: extension.js:100
-msgid "Project: None"
-msgstr "Projet: Aucun"
-
-#: extension.js:103
-msgid "Issue: None"
-msgstr "Issue: Aucune"
-
-#: extension.js:107
-msgid "Open project in browser"
-msgstr "Ouvrir le projet dans le navigateur"
-
-#: extension.js:112
-msgid "Open issue in browser"
-msgstr "Ouvrir l'issue dans le navigateur"
-
-#: extension.js:124 extension.js:285
-msgid "Submit"
-msgstr ""
-
-#: extension.js:135
-msgid "Start"
-msgstr "Démarrer"
-
-#: extension.js:139 extension.js:465 extension.js:561
-msgid "Pause"
-msgstr "Pause"
-
-#: extension.js:144 issueSelector.js:271 selectorWindow.js:255
-#: timeEntryDialog.js:68
-msgid "Cancel"
-msgstr "Annuler"
-
-#: extension.js:151
-#, fuzzy
-msgid "Paused work"
-msgstr "Pause"
-
-#: extension.js:155
-msgid "My Doing — board order"
-msgstr ""
-
-#: extension.js:158
-msgid "Open the menu to refresh your queue"
-msgstr ""
-
-#: extension.js:162
-msgid "Monthly Report"
-msgstr "Rapport mensuel"
-
-#: extension.js:169
-msgid "Settings"
-msgstr "Paramètres"
-
-#: extension.js:178 extension.js:221
-msgid "Finish the time entry before switching issues"
-msgstr ""
-
-#: extension.js:197 extension.js:380 extension.js:388 extension.js:403
-#: extension.js:411 extension.js:646 extension.js:648 extension.js:652
-#: extension.js:666 extension.js:685 issueSelector.js:484 issueSelector.js:490
-#: selectorWindow.js:320 selectorWindow.js:324 reportWindow.js:260
-#: reportWindow.js:281 reportWindow.js:318 reportWindow.js:336
-#: reportDialog.js:315 reportDialog.js:516 reportDialog.js:776
-#: reportDialog.js:824
-msgid "Error"
-msgstr "Erreur"
-
-#: extension.js:197
-msgid "Unable to open selector"
-msgstr "Impossible d'ouvrir le sélecteur"
-
-#: extension.js:247 extension.js:789 issueSelector.js:94 selectorWindow.js:115
-#: reportDialog.js:66 reportDialog.js:692
-msgid "Project"
-msgstr "Projet"
-
-#: extension.js:248 extension.js:794 issueSelector.js:147
-msgid "Issue"
-msgstr "Issue"
-
-#: extension.js:270
-msgid "No paused work"
-msgstr ""
-
-#: extension.js:300
-#, fuzzy
-msgid "Loading…"
-msgstr "Chargement..."
-
-#: extension.js:303
-msgid "Find an issue to choose your project first"
-msgstr ""
-
-#: extension.js:314
-#, fuzzy
-msgid "Unable to load Doing queue"
-msgstr "Impossible de charger le rapport"
-
-#: extension.js:326
-#, fuzzy
-msgid "No other issues in Doing"
-msgstr "Aucune issue trouvée"
-
-#: extension.js:333
-#, fuzzy
-msgid "Find more issues…"
-msgstr "Chargement des issues..."
-
-#: extension.js:349 extension.js:623 selectorWindow.js:298 reportWindow.js:244
-#: reportWindow.js:299
-#, fuzzy
-msgid "Invalid GitLab server URL"
-msgstr "URL du serveur GitLab"
-
-#: extension.js:372
-msgid "No project selected"
-msgstr "Aucun projet sélectionné"
-
-#: extension.js:380
-msgid "Project URL not available"
-msgstr "URL du projet non disponible"
-
-#: extension.js:388 extension.js:411
-msgid "Unable to open browser"
-msgstr "Impossible d'ouvrir le navigateur"
-
-#: extension.js:395
-msgid "No issue selected"
-msgstr "Aucune issue sélectionnée"
-
-#: extension.js:403
-msgid "Issue URL not available"
-msgstr "URL de l'issue non disponible"
-
-#: extension.js:421 issueSelector.js:911
-msgid "Please select a project and an issue"
-msgstr "Veuillez sélectionner un projet et une issue"
-
-#: extension.js:468 extension.js:561 extension.js:785
-msgid "Resume"
-msgstr "Reprendre"
-
-#: extension.js:511
-msgid "Timer cancelled"
-msgstr "Timer annulé"
-
-#: extension.js:560
-#, fuzzy
-msgid "Paused"
-msgstr "Pause"
-
-#: extension.js:560
-msgid "Working on"
-msgstr ""
-
-#: extension.js:644
-msgid "Time sent"
-msgstr "Temps envoyé"
-
-#: extension.js:644
-msgid "on issue"
-msgstr "sur l'issue"
-
-#: extension.js:648
-msgid "Unable to send time"
-msgstr "Impossible d'envoyer le temps"
-
-#: extension.js:652 extension.js:666
-msgid "Error sending time"
-msgstr "Erreur lors de l'envoi du temps"
-
-#: extension.js:685
+#: extension.js:113
 msgid "Unable to open report"
 msgstr "Impossible d'ouvrir le rapport"
 
-#: issueSelector.js:81
-msgid "Select a project and an issue"
-msgstr "Sélectionner un projet et une issue"
-
-#: issueSelector.js:101 selectorWindow.js:119 reportDialog.js:114
-msgid "Search project..."
-msgstr "Rechercher un projet..."
-
-#: issueSelector.js:161
+#: prefs.js:15
 #, fuzzy
-msgid "Search issues on GitLab..."
-msgstr "Rechercher une issue..."
+msgid "Pause or resume timer"
+msgstr "Impossible d'envoyer le temps"
 
-#: issueSelector.js:198 selectorWindow.js:190
-msgid "Assignee: username, me, or None"
+#: prefs.js:15
+msgid "Opens the menu when nothing is tracked"
 msgstr ""
 
-#: issueSelector.js:211 selectorWindow.js:201
-msgid "Labels, comma-separated"
+#: prefs.js:16 ui/submitDialog.js:22
+msgid "Submit time"
 msgstr ""
 
-#: issueSelector.js:253 selectorWindow.js:243
-#, fuzzy
-msgid "Load more issues"
-msgstr "Chargement des issues..."
-
-#: issueSelector.js:276
-msgid "Select"
-msgstr "Sélectionner"
-
-#: issueSelector.js:296
-#, fuzzy
-msgid "Issue selector"
-msgstr "Aucune issue sélectionnée"
-
-#: issueSelector.js:510 selectorWindow.js:123 selectorWindow.js:351
-#: reportWindow.js:114 reportWindow.js:404 reportDialog.js:295
-msgid "Loading projects..."
-msgstr "Chargement des projets..."
-
-#: issueSelector.js:656 selectorWindow.js:449 selectorWindow.js:475
-msgid "Loading issues..."
-msgstr "Chargement des issues..."
-
-#: issueSelector.js:736 selectorWindow.js:550
-#, fuzzy
-msgid "Closed issues"
-msgstr "sur l'issue"
-
-#: issueSelector.js:738 selectorWindow.js:552
-#, fuzzy
-msgid "All issues"
-msgstr "sur l'issue"
-
-#: issueSelector.js:740 selectorWindow.js:554
-#, fuzzy
-msgid "Open issues"
-msgstr "sur l'issue"
-
-#: issueSelector.js:773 selectorWindow.js:584
-msgid "No issues found"
-msgstr "Aucune issue trouvée"
-
-#: issueSelector.js:792
-msgid "Recently worked issues"
+#: prefs.js:16
+msgid "Opens the submit dialog for the active session"
 msgstr ""
-
-#: issueSelector.js:911 reportDialog.js:683 reportDialog.js:783
-#: reportDialog.js:832 reportDialog.js:845
-msgid "GitLab Time Tracking"
-msgstr "GitLab Time Tracking"
-
-#: selectorWindow.js:40
-#, fuzzy
-msgid "Switch issue"
-msgstr "sur l'issue"
-
-#: selectorWindow.js:87
-msgid "Find an issue and start working"
-msgstr ""
-
-#: selectorWindow.js:91
-#, fuzzy
-msgid "Change project"
-msgstr "Chargement des projets..."
-
-#: selectorWindow.js:148
-msgid "Choose your project once to get started"
-msgstr ""
-
-#: selectorWindow.js:153
-msgid "Search all project issues by text or #number…"
-msgstr ""
-
-#: selectorWindow.js:165
-msgid "Use saved filters"
-msgstr ""
-
-#: selectorWindow.js:211 selectorWindow.js:584
-#, fuzzy
-msgid "Select a project first"
-msgstr "Sélectionner un projet..."
-
-#: selectorWindow.js:260
-msgid "Switch and start"
-msgstr ""
-
-#: selectorWindow.js:267
-msgid "Open in GitLab"
-msgstr ""
-
-#: selectorWindow.js:470
-#, fuzzy
-msgid "Loading current user..."
-msgstr "Chargement des projets..."
-
-#: selectorWindow.js:600
-msgid "Work in progress — click to resume"
-msgstr ""
-
-#: reportWindow.js:57
-#, fuzzy
-msgid "GitLab Time Report"
-msgstr "Rapport mensuel du temps"
-
-#: reportWindow.js:97 reportWindow.js:909 reportDialog.js:48
-#: reportDialog.js:691
-msgid "Monthly Time Report"
-msgstr "Rapport mensuel du temps"
-
-#: reportWindow.js:142 reportWindow.js:849
-msgid "User"
-msgstr ""
-
-#: reportWindow.js:144 reportWindow.js:360
-#, fuzzy
-msgid "All users"
-msgstr "sur l'issue"
-
-#: reportWindow.js:175
-#, fuzzy
-msgid "Category"
-msgstr "Catégories"
-
-#: reportWindow.js:177
-msgid "Category labels or regex, comma-separated"
-msgstr ""
-
-#: reportWindow.js:190 reportDialog.js:243
-msgid "Export Markdown"
-msgstr "Exporter Markdown"
-
-#: reportWindow.js:194 reportDialog.js:247
-msgid "Export CSV"
-msgstr "Exporter CSV"
-
-#: reportWindow.js:203 reportDialog.js:678
-msgid "Categories"
-msgstr "Catégories"
-
-#: reportWindow.js:204
-msgid "Calendar"
-msgstr ""
-
-#: reportWindow.js:217
-#, fuzzy
-msgid "Select a project"
-msgstr "Sélectionner un projet..."
-
-#: reportWindow.js:348
-#, fuzzy
-msgid "Unable to load users"
-msgstr "Impossible de charger le rapport"
-
-#: reportWindow.js:478 reportDialog.js:262
-msgid "January"
-msgstr "Janvier"
-
-#: reportWindow.js:478 reportDialog.js:262
-msgid "February"
-msgstr "Février"
-
-#: reportWindow.js:478 reportDialog.js:262
-msgid "March"
-msgstr "Mars"
-
-#: reportWindow.js:478 reportDialog.js:263
-msgid "April"
-msgstr "Avril"
-
-#: reportWindow.js:478 reportDialog.js:263
-msgid "May"
-msgstr "Mai"
-
-#: reportWindow.js:478 reportDialog.js:263
-msgid "June"
-msgstr "Juin"
-
-#: reportWindow.js:479 reportDialog.js:264
-msgid "July"
-msgstr "Juillet"
-
-#: reportWindow.js:479 reportDialog.js:264
-msgid "August"
-msgstr "Août"
-
-#: reportWindow.js:479 reportDialog.js:264
-msgid "September"
-msgstr "Septembre"
-
-#: reportWindow.js:479 reportDialog.js:265
-msgid "October"
-msgstr "Octobre"
-
-#: reportWindow.js:479 reportDialog.js:265
-msgid "November"
-msgstr "Novembre"
-
-#: reportWindow.js:479 reportDialog.js:265
-msgid "December"
-msgstr "Décembre"
-
-#: reportWindow.js:495 reportDialog.js:457
-msgid "Loading..."
-msgstr "Chargement..."
-
-#: reportWindow.js:560
-#, fuzzy
-msgid "Unable to load report"
-msgstr "Impossible d'ouvrir le rapport"
-
-#: reportWindow.js:590
-msgid "Unknown user"
-msgstr ""
-
-#: reportWindow.js:610 reportDialog.js:549 reportDialog.js:724
-msgid "Other"
-msgstr "Autre"
-
-#: reportWindow.js:610 reportDialog.js:549 reportDialog.js:724
-msgid "No label"
-msgstr "Sans étiquette"
-
-#: reportWindow.js:645 reportDialog.js:618
-msgid "No time tracked for this period"
-msgstr "Aucun temps enregistré pour cette période"
-
-#: reportWindow.js:646 reportWindow.js:656 reportWindow.js:853
-#: reportWindow.js:872 reportWindow.js:911 reportDialog.js:231
-#: reportDialog.js:670 reportDialog.js:678 reportDialog.js:694
-msgid "Total time"
-msgstr "Temps total"
-
-#: reportWindow.js:656
-msgid "Category total"
-msgstr ""
-
-#: reportWindow.js:751 reportWindow.js:916
-msgid "Time by user and category"
-msgstr ""
-
-#: reportWindow.js:760
-msgid "Columns"
-msgstr ""
-
-#: reportWindow.js:772
-#, fuzzy
-msgid "Select all"
-msgstr "Sélectionner"
-
-#: reportWindow.js:782 prefs.js:59
-msgid "Clear"
-msgstr ""
-
-#: reportWindow.js:910 reportDialog.js:693
-msgid "Period"
-msgstr "Période"
-
-#: reportWindow.js:912 reportDialog.js:697
-msgid "Summary by category"
-msgstr "Résumé par catégorie"
-
-#: reportWindow.js:954 reportDialog.js:846
-msgid "Report exported"
-msgstr "Rapport exporté"
-
-#: reportWindow.js:956 reportDialog.js:776 reportDialog.js:824
-msgid "Unable to export"
-msgstr "Impossible d'exporter"
-
-#: reportDialog.js:91
-msgid "Select a project..."
-msgstr "Sélectionner un projet..."
-
-#: reportDialog.js:251
-msgid "Close"
-msgstr "Fermer"
-
-#: reportDialog.js:397
-msgid "No projects available"
-msgstr "Aucun projet disponible"
-
-#: reportDialog.js:678
-msgid "Issues"
-msgstr "Issues"
-
-#: reportDialog.js:683 reportDialog.js:783
-msgid "No data to export"
-msgstr "Aucune donnée à exporter"
-
-#: reportDialog.js:707
-msgid "Detail by issue"
-msgstr "Détail par ticket"
-
-#: reportDialog.js:851
-msgid "Open File"
-msgstr "Ouvrir le fichier"
-
-#: reportDialog.js:861
-msgid "Open Containing Folder"
-msgstr "Ouvrir le dossier parent"
 
 #: prefs.js:17
-msgid "GitLab Configuration"
-msgstr "Configuration GitLab"
+msgid "Discard timer"
+msgstr ""
+
+#: prefs.js:17
+msgid "Undo is offered in a notification"
+msgstr ""
 
 #: prefs.js:18
-msgid "Configure your GitLab server and access token"
-msgstr "Configurez votre serveur GitLab et votre token d'accès"
+#, fuzzy
+msgid "Search issues"
+msgstr "sur l'issue"
 
-#: prefs.js:24
-msgid "GitLab Server URL"
+#: prefs.js:18
+msgid "Opens the menu with the search focused"
+msgstr ""
+
+#: prefs.js:19
+#, fuzzy
+msgid "Monthly report"
+msgstr "Rapport mensuel"
+
+#: prefs.js:19
+#, fuzzy
+msgid "Opens the report window"
+msgstr "Rapport mensuel"
+
+#: prefs.js:58
+msgid "GitLab"
+msgstr ""
+
+#: prefs.js:61
+#, fuzzy
+msgid "Server URL"
 msgstr "URL du serveur GitLab"
 
-#: prefs.js:27
-msgid ""
-"Include the protocol, for example https://gitlab.com. HTTPS is recommended."
-msgstr ""
-
-#: prefs.js:35
-msgid "Access Token"
+#: prefs.js:71
+#, fuzzy
+msgid "Access token"
 msgstr "Token d'accès"
 
-#: prefs.js:44
+#: prefs.js:77
+msgid "Connection"
+msgstr ""
+
+#: prefs.js:77
+msgid "Not checked yet"
+msgstr ""
+
+#: prefs.js:81
+msgid "Check connection"
+msgstr ""
+
+#: prefs.js:89
+msgid "Create access token…"
+msgstr ""
+
+#: prefs.js:90
+msgid "Opens GitLab with the name and api scope prefilled"
+msgstr ""
+
+#: prefs.js:130 prefs.js:206
+msgid "URL must start with https://"
+msgstr ""
+
+#: prefs.js:157
+msgid "Stored unencrypted — libsecret not available"
+msgstr ""
+
+#: prefs.js:175
 #, fuzzy
-msgid "Default Project"
-msgstr "Projet"
+msgid "Enter an access token"
+msgstr "Configurez votre serveur GitLab et votre token d'accès"
 
-#: prefs.js:45
-msgid ""
-"The first selected project is used as the default project for issue "
-"selection."
-msgstr ""
-
-#: prefs.js:50
+#: prefs.js:175
 #, fuzzy
-msgid "Default project"
-msgstr "Sélectionner un projet..."
+msgid "Enter the server URL"
+msgstr "URL du serveur GitLab"
 
-#: prefs.js:54
-msgid "Not set yet"
+#: prefs.js:178
+msgid "Checking…"
 msgstr ""
 
-#: prefs.js:70
-msgid "Doing column labels"
+#: prefs.js:183
+msgid "Connected as"
 msgstr ""
 
-#: prefs.js:73
+#: prefs.js:202
+msgid "Invalid token"
+msgstr ""
+
+#: prefs.js:204 ui/actions.js:17 report/reportWindow.js:291
+msgid "Server not reachable"
+msgstr ""
+
+#: prefs.js:208
+msgid "Error"
+msgstr "Erreur"
+
+#: prefs.js:216
+msgid "Work"
+msgstr ""
+
+#: prefs.js:218 prefs.js:252
+#, fuzzy
+msgid "Tracked projects"
+msgstr "Chargement des projets..."
+
+#: prefs.js:225
+#, fuzzy
+msgid "Doing labels"
+msgstr "Sans étiquette"
+
+#: prefs.js:228
 msgid ""
 "Exact GitLab label names, comma-separated. Leave empty to show all your open "
 "issues."
 msgstr ""
 
-#: prefs.js:79
-msgid "Timer Configuration"
-msgstr "Configuration du minuteur"
-
-#: prefs.js:80
-msgid "Configure timer behavior after screen lock, logout or restart"
-msgstr ""
-"Configurer le comportement du minuteur après verrouillage, déconnexion ou "
-"redémarrage"
-
-#: prefs.js:86
-msgid "Resume automatically after unlock"
-msgstr "Reprendre automatiquement après déverrouillage"
-
-#: prefs.js:87
-msgid "Automatically resume the timer when the screen is unlocked"
-msgstr "Reprendre automatiquement le minuteur quand l'écran est déverrouillé"
-
-#: prefs.js:94
-msgid "Count elapsed time when locked"
-msgstr "Compter le temps écoulé pendant le verrouillage"
-
-#: prefs.js:95
-msgid "Count time elapsed during lock, logout or shutdown"
-msgstr ""
-"Compter le temps écoulé pendant le verrouillage, la déconnexion ou l'arrêt"
-
-#: prefs.js:114
-msgid "Keyboard Shortcuts"
+#: prefs.js:241
+msgid "None — choose the projects to track"
 msgstr ""
 
-#: prefs.js:115
+#: prefs.js:260
+#, fuzzy
+msgid "Search projects…"
+msgstr "Rechercher un projet..."
+
+#: prefs.js:263
+#, fuzzy
+msgid "Loading projects…"
+msgstr "Chargement des projets..."
+
+#: prefs.js:305
+#, fuzzy
+msgid "No projects found"
+msgstr "Aucune issue trouvée"
+
+#: prefs.js:334
+msgid "Timer"
+msgstr ""
+
+#: prefs.js:336
+msgid "Show time in top bar"
+msgstr ""
+
+#: prefs.js:342
+#, fuzzy
+msgid "Pause timer"
+msgstr "Annuler"
+
+#: prefs.js:342
+msgid "Keep counting"
+msgstr ""
+
+#: prefs.js:342
+#, fuzzy
+msgid "Pause and resume on unlock"
+msgstr "Mettre en pause quand l'écran est verrouillé"
+
+#: prefs.js:344
+#, fuzzy
+msgid "When the screen locks"
+msgstr "Mettre en pause quand l'écran est verrouillé"
+
+#: prefs.js:345
+msgid "Also applies to logout, restart and crashes"
+msgstr ""
+
+#: prefs.js:360 prefs.js:371
+msgid "Keyboard shortcuts"
+msgstr ""
+
+#: prefs.js:375
 msgid ""
-"Use accelerator syntax such as Super+Alt+T. Leave empty to disable a "
+"Use accelerator syntax such as <Super><Alt>t. Leave empty to disable a "
 "shortcut."
 msgstr ""
 
-#: prefs.js:119
-msgid "Start, pause, or resume timer"
+#: ui/actions.js:15 report/reportWindow.js:290
+msgid "Invalid token or insufficient permissions"
 msgstr ""
 
-#: prefs.js:120 timeEntryDialog.js:20
+#: ui/actions.js:19
 #, fuzzy
-msgid "Stop and send time"
-msgstr "Impossible d'envoyer le temps"
+msgid "GitLab is not configured"
+msgstr "Configuration GitLab"
 
-#: prefs.js:121
+#: ui/actions.js:21
 #, fuzzy
-msgid "Cancel timer"
-msgstr "Annuler"
+msgid "Not found"
+msgstr "Aucune issue trouvée"
 
-#: prefs.js:122
-msgid "Find or switch issue"
+#: ui/actions.js:78
+msgid "Time sent"
+msgstr "Temps envoyé"
+
+#: ui/actions.js:78
+#, javascript-format
+msgid "Sent %s to #%s"
 msgstr ""
 
-#: prefs.js:123
+#: ui/actions.js:83 report/reportWindow.js:122
+msgid "Retry"
+msgstr ""
+
+#: ui/actions.js:85
 #, fuzzy
-msgid "Open monthly report"
+msgid "Open Settings"
+msgstr "Paramètres"
+
+#: ui/actions.js:86
+#, fuzzy
+msgid "Time not sent"
+msgstr "Temps envoyé"
+
+#: ui/actions.js:87
+#, javascript-format
+msgid "Couldn't send time to #%s: %s"
+msgstr ""
+
+#: ui/actions.js:106
+msgid "Discarded"
+msgstr ""
+
+#: ui/actions.js:107
+#, javascript-format
+msgid "Discarded %s on #%s"
+msgstr ""
+
+#: ui/actions.js:108
+msgid "Undo"
+msgstr ""
+
+#: ui/actions.js:129
+msgid "Issue URL not available"
+msgstr "URL de l'issue non disponible"
+
+#: ui/actions.js:135
+msgid "Unable to open browser"
+msgstr "Impossible d'ouvrir le navigateur"
+
+#: ui/indicator.js:66
+msgid "Set up GitLab…"
+msgstr ""
+
+#: ui/indicator.js:234
+msgid "Offline — showing last known queue"
+msgstr ""
+
+#: ui/indicator.js:252
+#, fuzzy
+msgid "Searching…"
+msgstr "Chargement..."
+
+#: ui/indicator.js:293
+msgid "active"
+msgstr ""
+
+#: ui/indicator.js:293 ui/indicator.js:297
+#, fuzzy
+msgid "paused"
+msgstr "Pause"
+
+#: ui/indicator.js:299
+msgid "doing"
+msgstr ""
+
+#: ui/indicator.js:333
+msgid "No results"
+msgstr ""
+
+#: ui/indicator.js:333
+msgid "Set up GitLab to search issues"
+msgstr ""
+
+#: ui/menuSections.js:46
+#, fuzzy
+msgid "Search issues or #number…"
+msgstr "Rechercher une issue..."
+
+#: ui/menuSections.js:241 ui/menuSections.js:256
+msgid "Pause"
+msgstr "Pause"
+
+#: ui/menuSections.js:242 ui/menuSections.js:297
+msgid "Submit time…"
+msgstr ""
+
+#: ui/menuSections.js:243
+#, fuzzy
+msgid "Open in browser"
+msgstr "Ouvrir l'issue dans le navigateur"
+
+#: ui/menuSections.js:244
+msgid "Discard"
+msgstr ""
+
+#: ui/menuSections.js:252 ui/menuSections.js:306
+#, fuzzy
+msgid "Sending…"
+msgstr "Chargement..."
+
+#: ui/menuSections.js:256
+msgid "Resume"
+msgstr "Reprendre"
+
+#: ui/menuSections.js:279
+#, fuzzy
+msgid "Paused"
+msgstr "Pause"
+
+#: ui/menuSections.js:326
+msgid "Doing"
+msgstr ""
+
+#: ui/menuSections.js:329
+#, fuzzy
+msgid "Choose projects…"
+msgstr "Chargement des projets..."
+
+#: ui/menuSections.js:419 report/reportWindow.js:28
+msgid "Monthly Report"
 msgstr "Rapport mensuel"
 
-#: prefs.js:127
-msgid "Reports Configuration"
-msgstr "Configuration des rapports"
+#: ui/menuSections.js:422
+msgid "Settings"
+msgstr "Paramètres"
 
-#: prefs.js:128
-msgid "Configure filters for monthly reports"
-msgstr "Configurez les filtres pour les rapports mensuels"
-
-#: prefs.js:134
-msgid "Tags included in reports"
-msgstr "Tags inclus dans les rapports"
-
-#: prefs.js:144
-msgid ""
-"Leave empty to display all tags.\n"
-"Otherwise, enter a comma-separated list of tags or regular expressions.\n"
-"Examples:\n"
-"  • \"Corrective Maintenance,Preventive Maintenance\"\n"
-"  • \"^Maintenance.*$\" (all tags starting with \"Maintenance\")\n"
-"  • \"Bug,^Feature.*$\"\n"
-"\n"
-"Issues without these tags will appear as \"Other\" in reports."
+#: ui/submitDialog.js:32
+msgid "For example: 1h 30m"
 msgstr ""
-"Laissez vide pour afficher tous les tags.\n"
-"Sinon, entrez une liste de tags séparés par des virgules ou des expressions "
-"régulières.\n"
-"Exemples :\n"
-"  • \"Maintenance corrective,Maintenance préventive\"\n"
-"  • \"^Maintenance.*$\" (tous les tags commençant par \"Maintenance\")\n"
-"  • \"Bug,^Feature.*$\"\n"
-"\n"
-"Les issues sans ces tags apparaîtront comme \"Autre\" dans les rapports."
 
-#: prefs.js:162
-msgid "Information"
-msgstr "Informations"
-
-#: prefs.js:167
-msgid ""
-"To create a personal access token:\n"
-"1. Go to your GitLab profile\n"
-"2. Settings → Access Tokens\n"
-"3. Create a new token with \"api\" permissions\n"
-"4. Copy the token and paste it above"
-msgstr ""
-"Pour créer un token d'accès personnel :\n"
-"1. Allez dans votre profil GitLab\n"
-"2. Paramètres → Tokens d'accès\n"
-"3. Créez un nouveau token avec les permissions \"api\"\n"
-"4. Copiez le token et collez-le ci-dessus"
-
-#: timeEntryDialog.js:31
+#: ui/submitDialog.js:36
 #, fuzzy
 msgid "Time spent"
 msgstr "Temps envoyé"
 
-#: timeEntryDialog.js:37
-msgid "For example: 1h 30m"
-msgstr ""
-
-#: timeEntryDialog.js:45
+#: ui/submitDialog.js:39
 msgid "Enter a duration such as 1h 30m"
 msgstr ""
 
-#: timeEntryDialog.js:52
-msgid "Comment about what you did"
-msgstr ""
-
-#: timeEntryDialog.js:57
+#: ui/submitDialog.js:47
 msgid "What did you do?"
 msgstr ""
 
-#: timeEntryDialog.js:73
-msgid "Send"
+#: ui/submitDialog.js:51
+msgid "Comment"
 msgstr ""
+
+#: ui/submitDialog.js:54
+msgid "Cancel"
+msgstr "Annuler"
+
+#: ui/submitDialog.js:55
+msgid "Submit"
+msgstr ""
+
+#: report/reportWindow.js:92
+msgid "Previous month"
+msgstr ""
+
+#: report/reportWindow.js:93
+msgid "Next month"
+msgstr ""
+
+#: report/reportWindow.js:121
+#, fuzzy
+msgid "Unable to load report"
+msgstr "Impossible d'ouvrir le rapport"
+
+#: report/reportWindow.js:132 report/reportWindow.js:224
+msgid "Categories"
+msgstr "Catégories"
+
+#: report/reportWindow.js:135
+msgid "Calendar"
+msgstr ""
+
+#: report/reportWindow.js:150
+#, fuzzy
+msgid "Export as CSV"
+msgstr "Exporter CSV"
+
+#: report/reportWindow.js:151
+#, fuzzy
+msgid "Export as Markdown"
+msgstr "Exporter Markdown"
+
+#: report/reportWindow.js:159
+msgid "Export Markdown"
+msgstr "Exporter Markdown"
+
+#: report/reportWindow.js:159
+msgid "Export CSV"
+msgstr "Exporter CSV"
+
+#: report/reportWindow.js:172
+msgid "Project"
+msgstr "Projet"
+
+#: report/reportWindow.js:186 report/reportWindow.js:450
+#: report/reportWindow.js:454
+msgid "User"
+msgstr ""
+
+#: report/reportWindow.js:200
+msgid "Category labels or regular expressions, comma-separated"
+msgstr ""
+
+#: report/reportWindow.js:212
+msgid "Issues without a matching label are grouped as “Other”."
+msgstr ""
+
+#: report/reportWindow.js:224
+#, fuzzy
+msgid "Categories: All"
+msgstr "Catégories"
+
+#: report/reportWindow.js:292
+msgid "GitLab is not configured. Open the extension settings first."
+msgstr ""
+
+#: report/reportWindow.js:303
+msgid "Everyone"
+msgstr ""
+
+#: report/reportWindow.js:337
+msgid "Other"
+msgstr "Autre"
+
+#: report/reportWindow.js:337
+msgid "No label"
+msgstr "Sans étiquette"
+
+#: report/reportWindow.js:337
+msgid "Unknown user"
+msgstr ""
+
+#: report/reportWindow.js:341 report/reportWindow.js:456
+#: report/reportWindow.js:472
+#, fuzzy
+msgid "Total"
+msgstr "Temps total"
+
+#: report/reportWindow.js:341
+#, fuzzy
+msgid "issues"
+msgstr "Issues"
+
+#: report/reportWindow.js:341
+#, fuzzy
+msgid "categories"
+msgstr "Catégories"
+
+#: report/reportWindow.js:354 report/reportWindow.js:487
+msgid "No time tracked for this period"
+msgstr "Aucun temps enregistré pour cette période"
+
+#: report/reportWindow.js:376 report/reportWindow.js:570
+msgid "Time by user and category"
+msgstr ""
+
+#: report/reportWindow.js:393
+#, fuzzy
+msgid "Select all"
+msgstr "Sélectionner"
+
+#: report/reportWindow.js:403
+msgid "Clear"
+msgstr ""
+
+#: report/reportWindow.js:434
+msgid "Columns"
+msgstr ""
+
+#: report/reportWindow.js:569
+msgid "Monthly Time Report"
+msgstr "Rapport mensuel du temps"
+
+#: report/reportWindow.js:569
+msgid "Period"
+msgstr "Période"
+
+#: report/reportWindow.js:569
+msgid "Total time"
+msgstr "Temps total"
+
+#: report/reportWindow.js:570
+msgid "Summary by category"
+msgstr "Résumé par catégorie"
+
+#: report/reportWindow.js:579
+msgid "Unable to export"
+msgstr "Impossible d'exporter"
+
+#: report/reportWindow.js:582
+msgid "Saved"
+msgstr ""
+
+#: report/reportWindow.js:582
+#, fuzzy
+msgid "Open"
+msgstr "Ouvrir le fichier"
+
+#: report/reportWindow.js:587
+#, fuzzy
+msgid "Unable to open file"
+msgstr "Impossible d'ouvrir le sélecteur"
+
+#~ msgid "GitLab Issues Timer"
+#~ msgstr "GitLab Timer Issues"
+
+#~ msgid "Please configure the server URL and token in preferences"
+#~ msgstr ""
+#~ "Veuillez configurer l'URL du serveur et le token dans les préférences"
+
+#, fuzzy
+#~ msgid "No active timer"
+#~ msgstr "Annuler"
+
+#~ msgid "Project: None"
+#~ msgstr "Projet: Aucun"
+
+#~ msgid "Issue: None"
+#~ msgstr "Issue: Aucune"
+
+#~ msgid "Open project in browser"
+#~ msgstr "Ouvrir le projet dans le navigateur"
+
+#~ msgid "Start"
+#~ msgstr "Démarrer"
+
+#, fuzzy
+#~ msgid "Paused work"
+#~ msgstr "Pause"
+
+#~ msgid "Issue"
+#~ msgstr "Issue"
+
+#, fuzzy
+#~ msgid "Unable to load Doing queue"
+#~ msgstr "Impossible de charger le rapport"
+
+#, fuzzy
+#~ msgid "No other issues in Doing"
+#~ msgstr "Aucune issue trouvée"
+
+#, fuzzy
+#~ msgid "Find more issues…"
+#~ msgstr "Chargement des issues..."
+
+#~ msgid "No project selected"
+#~ msgstr "Aucun projet sélectionné"
+
+#~ msgid "Project URL not available"
+#~ msgstr "URL du projet non disponible"
+
+#~ msgid "No issue selected"
+#~ msgstr "Aucune issue sélectionnée"
+
+#~ msgid "Please select a project and an issue"
+#~ msgstr "Veuillez sélectionner un projet et une issue"
+
+#~ msgid "Timer cancelled"
+#~ msgstr "Timer annulé"
+
+#~ msgid "on issue"
+#~ msgstr "sur l'issue"
+
+#~ msgid "Error sending time"
+#~ msgstr "Erreur lors de l'envoi du temps"
+
+#~ msgid "Select a project and an issue"
+#~ msgstr "Sélectionner un projet et une issue"
+
+#, fuzzy
+#~ msgid "Load more issues"
+#~ msgstr "Chargement des issues..."
+
+#~ msgid "Select"
+#~ msgstr "Sélectionner"
+
+#, fuzzy
+#~ msgid "Issue selector"
+#~ msgstr "Aucune issue sélectionnée"
+
+#~ msgid "Loading issues..."
+#~ msgstr "Chargement des issues..."
+
+#, fuzzy
+#~ msgid "Closed issues"
+#~ msgstr "sur l'issue"
+
+#, fuzzy
+#~ msgid "All issues"
+#~ msgstr "sur l'issue"
+
+#, fuzzy
+#~ msgid "Open issues"
+#~ msgstr "sur l'issue"
+
+#~ msgid "GitLab Time Tracking"
+#~ msgstr "GitLab Time Tracking"
+
+#, fuzzy
+#~ msgid "Select a project first"
+#~ msgstr "Sélectionner un projet..."
+
+#, fuzzy
+#~ msgid "Loading current user..."
+#~ msgstr "Chargement des projets..."
+
+#, fuzzy
+#~ msgid "GitLab Time Report"
+#~ msgstr "Rapport mensuel du temps"
+
+#, fuzzy
+#~ msgid "All users"
+#~ msgstr "sur l'issue"
+
+#, fuzzy
+#~ msgid "Category"
+#~ msgstr "Catégories"
+
+#, fuzzy
+#~ msgid "Select a project"
+#~ msgstr "Sélectionner un projet..."
+
+#, fuzzy
+#~ msgid "Unable to load users"
+#~ msgstr "Impossible de charger le rapport"
+
+#~ msgid "January"
+#~ msgstr "Janvier"
+
+#~ msgid "February"
+#~ msgstr "Février"
+
+#~ msgid "March"
+#~ msgstr "Mars"
+
+#~ msgid "April"
+#~ msgstr "Avril"
+
+#~ msgid "May"
+#~ msgstr "Mai"
+
+#~ msgid "June"
+#~ msgstr "Juin"
+
+#~ msgid "July"
+#~ msgstr "Juillet"
+
+#~ msgid "August"
+#~ msgstr "Août"
+
+#~ msgid "September"
+#~ msgstr "Septembre"
+
+#~ msgid "October"
+#~ msgstr "Octobre"
+
+#~ msgid "November"
+#~ msgstr "Novembre"
+
+#~ msgid "December"
+#~ msgstr "Décembre"
+
+#~ msgid "Loading..."
+#~ msgstr "Chargement..."
+
+#~ msgid "Report exported"
+#~ msgstr "Rapport exporté"
+
+#~ msgid "Select a project..."
+#~ msgstr "Sélectionner un projet..."
+
+#~ msgid "Close"
+#~ msgstr "Fermer"
+
+#~ msgid "No projects available"
+#~ msgstr "Aucun projet disponible"
+
+#~ msgid "No data to export"
+#~ msgstr "Aucune donnée à exporter"
+
+#~ msgid "Detail by issue"
+#~ msgstr "Détail par ticket"
+
+#~ msgid "Open Containing Folder"
+#~ msgstr "Ouvrir le dossier parent"
+
+#, fuzzy
+#~ msgid "Default Project"
+#~ msgstr "Projet"
+
+#, fuzzy
+#~ msgid "Default project"
+#~ msgstr "Sélectionner un projet..."
+
+#~ msgid "Timer Configuration"
+#~ msgstr "Configuration du minuteur"
+
+#~ msgid "Configure timer behavior after screen lock, logout or restart"
+#~ msgstr ""
+#~ "Configurer le comportement du minuteur après verrouillage, déconnexion ou "
+#~ "redémarrage"
+
+#~ msgid "Resume automatically after unlock"
+#~ msgstr "Reprendre automatiquement après déverrouillage"
+
+#~ msgid "Automatically resume the timer when the screen is unlocked"
+#~ msgstr ""
+#~ "Reprendre automatiquement le minuteur quand l'écran est déverrouillé"
+
+#~ msgid "Count elapsed time when locked"
+#~ msgstr "Compter le temps écoulé pendant le verrouillage"
+
+#~ msgid "Count time elapsed during lock, logout or shutdown"
+#~ msgstr ""
+#~ "Compter le temps écoulé pendant le verrouillage, la déconnexion ou l'arrêt"
+
+#, fuzzy
+#~ msgid "Stop and send time"
+#~ msgstr "Impossible d'envoyer le temps"
+
+#~ msgid "Reports Configuration"
+#~ msgstr "Configuration des rapports"
+
+#~ msgid "Configure filters for monthly reports"
+#~ msgstr "Configurez les filtres pour les rapports mensuels"
+
+#~ msgid "Tags included in reports"
+#~ msgstr "Tags inclus dans les rapports"
+
+#~ msgid ""
+#~ "Leave empty to display all tags.\n"
+#~ "Otherwise, enter a comma-separated list of tags or regular expressions.\n"
+#~ "Examples:\n"
+#~ "  • \"Corrective Maintenance,Preventive Maintenance\"\n"
+#~ "  • \"^Maintenance.*$\" (all tags starting with \"Maintenance\")\n"
+#~ "  • \"Bug,^Feature.*$\"\n"
+#~ "\n"
+#~ "Issues without these tags will appear as \"Other\" in reports."
+#~ msgstr ""
+#~ "Laissez vide pour afficher tous les tags.\n"
+#~ "Sinon, entrez une liste de tags séparés par des virgules ou des "
+#~ "expressions régulières.\n"
+#~ "Exemples :\n"
+#~ "  • \"Maintenance corrective,Maintenance préventive\"\n"
+#~ "  • \"^Maintenance.*$\" (tous les tags commençant par \"Maintenance\")\n"
+#~ "  • \"Bug,^Feature.*$\"\n"
+#~ "\n"
+#~ "Les issues sans ces tags apparaîtront comme \"Autre\" dans les rapports."
+
+#~ msgid "Information"
+#~ msgstr "Informations"
+
+#~ msgid ""
+#~ "To create a personal access token:\n"
+#~ "1. Go to your GitLab profile\n"
+#~ "2. Settings → Access Tokens\n"
+#~ "3. Create a new token with \"api\" permissions\n"
+#~ "4. Copy the token and paste it above"
+#~ msgstr ""
+#~ "Pour créer un token d'accès personnel :\n"
+#~ "1. Allez dans votre profil GitLab\n"
+#~ "2. Paramètres → Tokens d'accès\n"
+#~ "3. Créez un nouveau token avec les permissions \"api\"\n"
+#~ "4. Copiez le token et collez-le ci-dessus"
 
 #~ msgid "Select project & issue"
 #~ msgstr "Sélectionner projet & issue"
@@ -757,9 +844,6 @@ msgstr ""
 
 #~ msgid "Configure timer behavior"
 #~ msgstr "Configurer le comportement du minuteur"
-
-#~ msgid "Pause when screen is locked"
-#~ msgstr "Mettre en pause quand l'écran est verrouillé"
 
 #~ msgid "Automatically pause the timer when the screen is locked"
 #~ msgstr ""
