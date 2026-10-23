@@ -29,6 +29,8 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
         this._timeEntryDialog = null;
         this._sendingTime = false;
         this._destroyed = false;
+        this._pausedSessions = [];
+        this._queueRequestId = 0;
         this._selectionChangedId = this._settings.connect('changed::selection-state', () => this._applySelectionState());
 
         // Timer state
@@ -55,6 +57,12 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
         if (this._timerRunning || this._selectedProject) {
             this._updateUIAfterRestore();
         }
+        this._refreshWorkMenu();
+        this._updateButtonVisibility();
+        this.menu.connect('open-state-changed', (_menu, open) => {
+            if (open)
+                this._loadDoingQueue();
+        });
     }
 
     _getIconGicon(iconName) {
@@ -79,8 +87,10 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
     }
 
     _buildMenu() {
-        // Project/Issue selection button
-        let selectButton = new PopupMenu.PopupMenuItem(this._('Select project & issue'));
+        this._workingHeading = new PopupMenu.PopupMenuItem(this._('No active timer'), {reactive: false});
+        this.menu.addMenuItem(this._workingHeading);
+
+        let selectButton = new PopupMenu.PopupMenuItem(this._('Find another issue…'));
         selectButton.connect('activate', () => {
             this._openIssueSelector();
         });
@@ -107,8 +117,16 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
         // Timer display
-        this._timerLabel = new PopupMenu.PopupMenuItem('00:00:00', {reactive: false});
+        this._timerLabel = new PopupMenu.PopupBaseMenuItem({reactive: false, can_focus: false});
+        this._timerLabel.label = new St.Label({text: '00:00:00', x_expand: true});
+        this._timerLabel.add_child(this._timerLabel.label);
         this._timerLabel.label.add_style_class_name('gitlab-timer-label');
+        this._submitButton = new St.Button({label: this._('Submit'), style_class: 'button', can_focus: true});
+        this._submitButton.connect('clicked', () => {
+            this.menu.close();
+            this._stopTimer();
+        });
+        this._timerLabel.add_child(this._submitButton);
         this.menu.addMenuItem(this._timerLabel);
 
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
@@ -123,16 +141,21 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
         this._pauseButton.visible = false;
         this.menu.addMenuItem(this._pauseButton);
 
-        this._stopButton = new PopupMenu.PopupMenuItem(this._('Stop & Send'));
-        this._stopButton.connect('activate', () => this._stopTimer());
-        this._stopButton.visible = false;
-        this.menu.addMenuItem(this._stopButton);
-
         this._cancelButton = new PopupMenu.PopupMenuItem(this._('Cancel'));
         this._cancelButton.connect('activate', () => this._cancelTimer());
         this._cancelButton.visible = false;
         this.menu.addMenuItem(this._cancelButton);
 
+        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+
+        this.menu.addMenuItem(new PopupMenu.PopupMenuItem(this._('Paused work'), {reactive: false}));
+        this._pausedSection = new PopupMenu.PopupMenuSection();
+        this.menu.addMenuItem(this._pausedSection);
+        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+        this.menu.addMenuItem(new PopupMenu.PopupMenuItem(this._('My Doing — board order'), {reactive: false}));
+        this._queueSection = new PopupMenu.PopupMenuSection();
+        this.menu.addMenuItem(this._queueSection);
+        this._queueSection.addMenuItem(new PopupMenu.PopupMenuItem(this._('Open the menu to refresh your queue'), {reactive: false}));
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
         // Report button
@@ -151,8 +174,8 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
     }
 
     _openIssueSelector() {
-        if (this._timerRunning) {
-            Main.notify(this._('GitLab Issues Timer'), this._('Submit or cancel the current timer before selecting another issue'));
+        if (this._sendingTime || this._timeEntryDialog) {
+            Main.notify(this._('GitLab Issues Timer'), this._('Finish the time entry before switching issues'));
             return;
         }
 
@@ -194,21 +217,154 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
     }
 
     _setSelectedIssue(project, issue) {
-        // A selector opened before the timer started may still return a selection.
-        if (this._timerRunning) {
-            Main.notify(this._('GitLab Issues Timer'), this._('Submit or cancel the current timer before selecting another issue'));
+        if (this._sendingTime || this._timeEntryDialog) {
+            Main.notify(this._('GitLab Issues Timer'), this._('Finish the time entry before switching issues'));
             return;
         }
 
+        if (this._matchesIssue(this._currentSession(), project, issue)) {
+            if (!this._timerRunning)
+                this._startTimer();
+            else if (this._timerPaused)
+                this._pauseTimer();
+            return;
+        }
+
+        const previous = this._currentSession();
+        const resumed = this._pausedSessions.find(session => this._matchesIssue(session, project, issue));
+        this._pausedSessions = this._pausedSessions.filter(session =>
+            !this._matchesIssue(session, project, issue) &&
+            !this._matchesIssue(session, previous?.project, previous?.issue));
+        if (this._timerRunning && previous)
+            this._pausedSessions.unshift(previous);
+
+        this._removeTimerSource();
         this._selectedProject = project;
         this._selectedIssue = issue;
+        this._elapsedSeconds = resumed?.elapsedSeconds || 0;
         if (!getDefaultProject(this._settings))
             setDefaultProject(this._settings, project);
         this._projectLabel.label.set_text(`${this._('Project')}: ${project.path_with_namespace}`);
         this._issueLabel.label.set_text(`${this._('Issue')}: #${issue.iid} - ${issue.title.length > 40 ? issue.title.substring(0, 40) + '...' : issue.title}`);
         this._openProjectButton.visible = true;
         this._openIssueButton.visible = true;
-        this._saveTimerState();
+        this._startTimer();
+        this._updateTimerDisplay();
+        this._refreshWorkMenu();
+    }
+
+    _currentSession() {
+        if (!this._selectedProject || !this._selectedIssue)
+            return null;
+        return {project: serializeProject(this._selectedProject), issue: serializeIssue(this._selectedIssue),
+            elapsedSeconds: this._elapsedSeconds};
+    }
+
+    _matchesIssue(session, project, issue) {
+        return Boolean(session && project && issue && session.project.id === project.id && session.issue.iid === issue.iid);
+    }
+
+    _refreshWorkMenu() {
+        this._pausedSection.removeAll();
+        if (this._pausedSessions.length === 0)
+            this._pausedSection.addMenuItem(new PopupMenu.PopupMenuItem(this._('No paused work'), {reactive: false}));
+
+        for (const session of this._pausedSessions) {
+            const row = new PopupMenu.PopupBaseMenuItem({reactive: false, can_focus: false});
+            const switchButton = new St.Button({
+                label: `#${session.issue.iid} — ${session.issue.title}`,
+                style_class: 'button gitlab-work-title', x_expand: true, can_focus: true,
+            });
+            switchButton.accessible_name = `${session.project.path_with_namespace}: ${session.issue.title}`;
+            switchButton.connect('clicked', () => {
+                this.menu.close();
+                this._setSelectedIssue(session.project, session.issue);
+            });
+            row.add_child(switchButton);
+            row.add_child(new St.Label({text: this._formatElapsed(session.elapsedSeconds)}));
+            const submit = new St.Button({label: this._('Submit'), style_class: 'button', can_focus: true,
+                reactive: !this._sendingTime, visible: session.elapsedSeconds > 0});
+            submit.connect('clicked', () => {
+                this.menu.close();
+                this._showTimeEntry(session);
+            });
+            row.add_child(submit);
+            this._pausedSection.addMenuItem(row);
+        }
+    }
+
+    _loadDoingQueue() {
+        const requestId = ++this._queueRequestId;
+        const project = getDefaultProject(this._settings) || this._selectedProject;
+        this._queueSection.removeAll();
+        const status = new PopupMenu.PopupMenuItem(this._('Loading…'), {reactive: false});
+        this._queueSection.addMenuItem(status);
+        if (!project) {
+            status.label.set_text(this._('Find an issue to choose your project first'));
+            return;
+        }
+        const url = this._settings.get_string('gitlab-url');
+        const token = this._settings.get_string('gitlab-token');
+        if (!url || !token) {
+            status.label.set_text(this._('Please configure the server URL and token in preferences'));
+            return;
+        }
+        const onError = error => {
+            this._queueSection.removeAll();
+            this._queueSection.addMenuItem(new PopupMenu.PopupMenuItem(`${this._('Unable to load Doing queue')}: ${error}`, {reactive: false}));
+        };
+        this._queueGet('/user', requestId, user => {
+            const labels = this._settings.get_string('doing-labels').trim();
+            const query = `state=opened&assignee_id=${user.id}&order_by=relative_position&sort=asc&per_page=100` +
+                (labels ? `&labels=${encodeURIComponent(labels)}` : '');
+            this._queueGet(`/projects/${project.id}/issues?${query}`, requestId, issues => {
+                this._queueSection.removeAll();
+                const available = issues.filter(issue =>
+                    !(this._timerRunning && this._matchesIssue(this._currentSession(), project, issue)) &&
+                    !this._pausedSessions.some(session => this._matchesIssue(session, project, issue)));
+                if (available.length === 0)
+                    this._queueSection.addMenuItem(new PopupMenu.PopupMenuItem(this._('No other issues in Doing'), {reactive: false}));
+                for (const issue of available.slice(0, 20)) {
+                    const item = new PopupMenu.PopupMenuItem(`#${issue.iid} — ${issue.title}`);
+                    item.connect('activate', () => this._setSelectedIssue(project, issue));
+                    this._queueSection.addMenuItem(item);
+                }
+                if (available.length > 20 || issues.length === 100) {
+                    const more = new PopupMenu.PopupMenuItem(this._('Find more issues…'));
+                    more.connect('activate', () => this._openIssueSelector());
+                    this._queueSection.addMenuItem(more);
+                }
+            }, onError);
+        }, onError);
+    }
+
+    _queueGet(path, requestId, onSuccess, onError) {
+        const url = this._settings.get_string('gitlab-url');
+        const token = this._settings.get_string('gitlab-token');
+        const isCurrent = () => !this._destroyed && requestId === this._queueRequestId &&
+            url === this._settings.get_string('gitlab-url') && token === this._settings.get_string('gitlab-token');
+        try {
+            const message = Soup.Message.new('GET', `${url}/api/v4${path}`);
+            if (!message)
+                throw new Error(this._('Invalid GitLab server URL'));
+            message.request_headers.append('PRIVATE-TOKEN', token);
+            this._httpSession.send_and_read_async(message, GLib.PRIORITY_DEFAULT, null, (session, result) => {
+                try {
+                    const bytes = session.send_and_read_finish(result);
+                    if (!isCurrent())
+                        return;
+                    if (message.status_code !== 200)
+                        throw new Error(String(message.status_code));
+                    onSuccess(JSON.parse(new TextDecoder().decode(bytes.get_data())));
+                } catch (e) {
+                    if (isCurrent())
+                        onError(e.message);
+                }
+            });
+        } catch (e) {
+            if (isCurrent())
+                onError(e.message);
+        }
     }
 
     _openProjectInBrowser() {
@@ -258,6 +414,9 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
     }
 
     _startTimer() {
+        if (this._sendingTime || this._timeEntryDialog)
+            return;
+
         if (!this._selectedProject || !this._selectedIssue) {
             Main.notify(this._('GitLab Issues Timer'), this._('Please select a project and an issue'));
             return;
@@ -309,6 +468,7 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
             this._pauseButton.label.set_text(this._('Resume'));
         }
         this._updateIcon();
+        this._updateButtonVisibility();
         this._saveTimerState();
     }
 
@@ -321,9 +481,16 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
         if (!this._timerPaused)
             this._pauseTimer();
 
-        const duration = this._formatGitLabDuration(this._elapsedSeconds);
-        const dialog = new TimeEntryDialog(this._, this._selectedProject, this._selectedIssue, duration, (editedDuration, comment) => {
-            this._sendTimeToGitLab(editedDuration, comment);
+        this._showTimeEntry(this._currentSession());
+    }
+
+    _showTimeEntry(session) {
+        if (!session || this._sendingTime || this._timeEntryDialog)
+            return;
+
+        const duration = this._formatGitLabDuration(session.elapsedSeconds);
+        const dialog = new TimeEntryDialog(this._, session.project, session.issue, duration, (editedDuration, comment) => {
+            this._sendTimeToGitLab(editedDuration, comment, session);
         });
         this._timeEntryDialog = dialog;
         dialog.connect('closed', () => {
@@ -374,25 +541,31 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
         this._updateButtonVisibility();
         this._updateIcon();
         this._saveTimerState();
+        this._refreshWorkMenu();
+    }
+
+    _formatElapsed(elapsed) {
+        const hours = Math.floor(elapsed / 3600);
+        const minutes = Math.floor((elapsed % 3600) / 60);
+        const seconds = elapsed % 60;
+        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
     }
 
     _updateTimerDisplay() {
-        const hours = Math.floor(this._elapsedSeconds / 3600);
-        const minutes = Math.floor((this._elapsedSeconds % 3600) / 60);
-        const seconds = this._elapsedSeconds % 60;
-
-        const timeString = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-        this._timerLabel.label.set_text(timeString);
+        this._timerLabel.label.set_text(this._formatElapsed(this._elapsedSeconds));
     }
 
     _updateButtonVisibility() {
+        this._workingHeading.label.set_text(this._timerRunning
+            ? (this._timerPaused ? this._('Paused') : this._('Working on')) : this._('No active timer'));
         this._pauseButton.label.set_text(this._timerPaused ? this._('Resume') : this._('Pause'));
         this._startButton.visible = !this._timerRunning;
         this._pauseButton.visible = this._timerRunning;
-        this._stopButton.visible = this._timerRunning;
+        this._submitButton.visible = this._timerRunning;
         this._cancelButton.visible = this._timerRunning;
         this._pauseButton.setSensitive(!this._sendingTime);
-        this._stopButton.setSensitive(!this._sendingTime);
+        this._submitButton.reactive = !this._sendingTime;
+        this._submitButton.can_focus = !this._sendingTime;
         this._cancelButton.setSensitive(!this._sendingTime);
     }
 
@@ -420,14 +593,16 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
         return duration || '1m';
     }
 
-    _sendTimeToGitLab(duration, comment) {
+    _sendTimeToGitLab(duration, comment, session = this._currentSession()) {
         if (this._sendingTime || !this._validateSettings())
             return;
 
         const url = this._settings.get_string('gitlab-url');
         const token = this._settings.get_string('gitlab-token');
-        const project = this._selectedProject;
-        const issue = this._selectedIssue;
+        if (!session)
+            return;
+        const {project, issue} = session;
+        const isCurrent = this._matchesIssue(session, this._selectedProject, this._selectedIssue);
         const params = [['duration', duration]];
 
         if (comment)
@@ -440,6 +615,7 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
 
         this._sendingTime = true;
         this._updateButtonVisibility();
+        this._refreshWorkMenu();
 
         try {
             const message = Soup.Message.new('POST', apiUrl);
@@ -458,7 +634,12 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
                             return;
 
                         if (message.status_code === 201 || message.status_code === 200) {
-                            this._resetTimer();
+                            if (isCurrent) {
+                                this._resetTimer();
+                            } else {
+                                this._pausedSessions = this._pausedSessions.filter(item => !this._matchesIssue(item, project, issue));
+                                this._saveTimerState();
+                            }
                             addRecentIssue(this._settings, project, issue);
                             Main.notify(this._('GitLab Issues Timer'), `${this._('Time sent')}: ${duration} ${this._('on issue')} #${issue.iid}`);
                         } else if (message.status_code === 401 || message.status_code === 403) {
@@ -473,6 +654,7 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
                         if (!this._destroyed) {
                             this._sendingTime = false;
                             this._updateButtonVisibility();
+                            this._refreshWorkMenu();
                         }
                     }
                 }
@@ -480,6 +662,7 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
         } catch (e) {
             this._sendingTime = false;
             this._updateButtonVisibility();
+            this._refreshWorkMenu();
             Main.notify(this._('Error'), `${this._('Error sending time')}: ${e.message}`);
         }
     }
@@ -504,34 +687,19 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
     }
 
     _saveTimerState() {
-        const projectData = serializeProject(this._selectedProject);
-        const issueData = serializeIssue(this._selectedIssue);
-
-        if (this._timerRunning) {
-            const state = {
-                running: this._timerRunning,
-                paused: this._timerPaused,
-                startTimestamp: this._timerStartTimestamp,
-                elapsedSeconds: this._elapsedSeconds,
-                savedAt: Math.floor(Date.now() / 1000),
-                project: projectData,
-                issue: issueData
-            };
-            this._settings.set_string('timer-state', JSON.stringify(state));
-            console.debug(`GitLab Timer: Saved timer state (paused: ${this._timerPaused}, elapsed: ${this._elapsedSeconds})`);
-        } else if (projectData) {
-            // Even if timer is not running, save the selected project for session persistence
-            const state = {
-                running: false,
-                paused: false,
-                project: projectData,
-                issue: issueData
-            };
-            this._settings.set_string('timer-state', JSON.stringify(state));
-            console.debug('GitLab Timer: Saved project state (timer not running)');
-        } else {
-            this._settings.set_string('timer-state', '{}');
-        }
+        // Keep the legacy current-timer fields so existing installations migrate
+        // without losing time; v2 adds independently paused issue sessions.
+        this._settings.set_string('timer-state', JSON.stringify({
+            version: 2,
+            running: this._timerRunning,
+            paused: this._timerPaused,
+            startTimestamp: this._timerStartTimestamp,
+            elapsedSeconds: this._elapsedSeconds,
+            savedAt: Math.floor(Date.now() / 1000),
+            project: serializeProject(this._selectedProject),
+            issue: serializeIssue(this._selectedIssue),
+            pausedSessions: this._pausedSessions,
+        }));
     }
 
     _restoreTimerState() {
@@ -540,15 +708,24 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
             if (!stateJson || stateJson === '{}') return;
 
             const state = JSON.parse(stateJson);
+            const pausedSessions = Array.isArray(state.pausedSessions) ? state.pausedSessions : [];
+            this._pausedSessions = [...new Map(pausedSessions.filter(session =>
+                session?.project?.id && session?.issue?.iid && typeof session.issue.title === 'string' &&
+                Number.isFinite(session.elapsedSeconds) && session.elapsedSeconds >= 0 &&
+                !this._matchesIssue(session, state.project, state.issue))
+                .map(session => [`${session.project.id}:${session.issue.iid}`, session])).values()];
 
             console.debug('GitLab Timer: Restoring timer state...');
 
             // Restore project and issue selection
             this._selectedProject = state.project;
             this._selectedIssue = state.issue;
+            this._timerRunning = Boolean(state.running);
 
             // If timer was not running, just restore project/issue selection
             if (!state.running) {
+                this._timerPaused = false;
+                this._elapsedSeconds = 0;
                 console.debug('GitLab Timer: Restored project selection (timer was not running)');
                 return;
             }
@@ -561,7 +738,7 @@ class GitLabIssuesIndicator extends PanelMenu.Button {
             const countTimeWhenLocked = this._settings.get_boolean('count-time-when-locked');
 
             // Handle restore based on settings
-            if (resumeOnUnlock) {
+            if (resumeOnUnlock && !state.paused) {
                 // Option 1: Resume automatically
                 this._timerPaused = false;
 

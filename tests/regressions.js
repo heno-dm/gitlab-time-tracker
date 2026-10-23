@@ -2,6 +2,7 @@
 // Exercise the production class methods without loading GNOME Shell or GTK UI.
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
+import {getWorkSessions} from '../state.js';
 
 const [testPath] = GLib.filename_from_uri(import.meta.url);
 const root = GLib.path_get_dirname(GLib.path_get_dirname(testPath));
@@ -76,6 +77,7 @@ function selector(values = {}) {
         _closed: false, _issueRequestSerial: 0, _issuePerPage: 100, _issues: [],
         _currentUser: null, _currentUserError: null, _issueReloadId: null,
         _issueStatusLabel: {}, _projectStatusLabel: {}, _loadMoreButton: {}, _selectButton: {},
+        _projectPane: {}, _projectTitle: {}, _updateWorkSuggestions() {},
         _updateIssueList() { this._selectedIssue = null; this._selectButton.sensitive = false; },
         _updateProjectList() {}, _selectDefaultProject() {},
     });
@@ -93,6 +95,10 @@ function indicator(values = {}) {
         Main: {notify(...args) { notices.push(args); }},
         serializeProject: project => project, serializeIssue: issue => issue,
         getDefaultProject: () => ({id: 1}), addRecentIssue() {},
+        PopupMenu: {PopupMenuItem: class {
+            constructor(text) { this.label = {text, set_text(value) { this.text = value; }}; }
+            connect(_signal, callback) { this.activate = callback; }
+        }},
         TimeEntryDialog: class {
             constructor(_gettext, _project, _issue, duration, onSend) {
                 this.duration = duration;
@@ -108,7 +114,11 @@ function indicator(values = {}) {
     Object.assign(instance, {_settings: settings(values), _httpSession: network.session,
         _: text => text, _timerRunning: true, _timerPaused: false, _elapsedSeconds: 3600,
         _timerStartTimestamp: 6400, _sendingTime: false, _destroyed: false,
-        _selectedProject: {id: 1}, _selectedIssue: {iid: 2},
+        _selectedProject: {id: 1, path_with_namespace: 'team/project'}, _selectedIssue: {iid: 2, title: 'First issue'},
+        _pausedSessions: [], _queueRequestId: 0, _refreshWorkMenu() {},
+        _projectLabel: {label: {set_text() {}}}, _issueLabel: {label: {set_text() {}}},
+        _openProjectButton: {}, _openIssueButton: {},
+        _queueSection: {items: [], removeAll() { this.items = []; }, addMenuItem(item) { this.items.push(item); }},
         _pauseButton: {label: {set_text() {}}}, _timeEntryDialog: null,
         _updateButtonVisibility() {}, _updateIcon() {}, _updateTimerDisplay() {},
         _removeTimerSource() {}, _startTimerSource() {},
@@ -191,17 +201,155 @@ test('late submission callbacks do not mutate a destroyed indicator', () => {
     equal(timer._elapsedSeconds, 3600);
 });
 
-test('active and paused sessions reject late issue selections', () => {
-    for (const paused of [false, true]) {
+test('switching issues preserves independent elapsed time and resumes previous work', () => {
+    const {instance: timer} = indicator();
+    const project = timer._selectedProject;
+    const firstIssue = timer._selectedIssue;
+    timer._setSelectedIssue(project, {iid: 3, title: 'Interruption'});
+    equal(timer._elapsedSeconds, 0);
+    assert(timer._timerRunning && !timer._timerPaused);
+    equal(timer._pausedSessions[0].issue.iid, 2);
+    equal(timer._pausedSessions[0].elapsedSeconds, 3600);
+    timer._elapsedSeconds = 300;
+    timer._setSelectedIssue(project, firstIssue);
+    equal(timer._elapsedSeconds, 3600);
+    equal(timer._pausedSessions.length, 1);
+    equal(timer._pausedSessions[0].issue.iid, 3);
+    equal(timer._pausedSessions[0].elapsedSeconds, 300);
+    const state = JSON.parse(timer._settings.get_string('timer-state'));
+    equal(state.version, 2);
+    equal(state.pausedSessions[0].elapsedSeconds, 300);
+});
+
+test('switching to the same issue resumes without duplicating its session', () => {
+    const {instance: timer} = indicator();
+    timer._timerPaused = true;
+    timer._setSelectedIssue(timer._selectedProject, timer._selectedIssue);
+    assert(!timer._timerPaused);
+    equal(timer._elapsedSeconds, 3600);
+    equal(timer._pausedSessions, []);
+});
+
+test('same issue numbers in different projects have independent timers', () => {
+    const {instance: timer} = indicator();
+    timer._setSelectedIssue({id: 3, path_with_namespace: 'other/project'}, {iid: 2, title: 'Other issue'});
+    equal(timer._elapsedSeconds, 0);
+    equal(timer._pausedSessions[0].project.id, 1);
+});
+
+test('pending submissions and dialogs reject switching without altering sessions', () => {
+    for (const guard of ['_sendingTime', '_timeEntryDialog']) {
         const {instance: timer, notices} = indicator();
-        timer._timerPaused = paused;
+        timer[guard] = true;
         timer._setSelectedIssue({id: 3}, {iid: 4});
-        timer._openIssueSelector();
         equal(timer._selectedProject.id, 1);
-        equal(timer._selectedIssue.iid, 2);
         equal(timer._elapsedSeconds, 3600);
-        equal(notices.length, 2);
+        equal(timer._pausedSessions, []);
+        equal(notices.length, 1);
     }
+});
+
+test('submitting paused work leaves the active timer and its elapsed time alone', () => {
+    const {instance: timer, dialogs, pending, respond} = indicator();
+    const session = {project: {id: 4}, issue: {iid: 7, title: 'Paused issue'}, elapsedSeconds: 1200};
+    timer._pausedSessions.push(session);
+    timer._showTimeEntry(session);
+    assert(!timer._timerPaused);
+    dialogs[0].send('20m', 'done');
+    dialogs[0].onClosed();
+    assert(pending[0].message.url.includes('/projects/4/issues/7/'));
+    timer._elapsedSeconds += 10;
+    respond(0, {}, 201);
+    equal(timer._elapsedSeconds, 3610);
+    assert(timer._timerRunning && !timer._timerPaused);
+    equal(timer._pausedSessions, []);
+    equal(JSON.parse(timer._settings.get_string('timer-state')).elapsedSeconds, 3610);
+});
+
+test('failed paused-work submissions retain both timers', () => {
+    const {instance: timer, dialogs, respond} = indicator();
+    const session = {project: {id: 4}, issue: {iid: 7, title: 'Paused issue'}, elapsedSeconds: 1200};
+    timer._pausedSessions.push(session);
+    timer._showTimeEntry(session);
+    dialogs[0].send('20m', '');
+    respond(0, {}, 500);
+    equal(timer._pausedSessions, [session]);
+    equal(timer._elapsedSeconds, 3600);
+    assert(!timer._sendingTime && !timer._timerPaused);
+});
+
+test('submit and cancel of current work never discard other paused sessions', () => {
+    const {instance: timer} = indicator();
+    const session = {project: {id: 4}, issue: {iid: 7, title: 'Paused issue'}, elapsedSeconds: 1200};
+    timer._pausedSessions.push(session);
+    timer._resetTimer();
+    equal(timer._pausedSessions, [session]);
+    const restored = indicator({'timer-state': timer._settings.get_string('timer-state')}).instance;
+    restored._restoreTimerState();
+    equal(restored._pausedSessions, [session]);
+    assert(!restored._timerRunning);
+});
+
+test('work sessions survive restart while only the current timer counts downtime', () => {
+    const {instance: timer, clock} = indicator({'resume-on-unlock': true, 'count-time-when-locked': true});
+    timer._setSelectedIssue(timer._selectedProject, {iid: 3, title: 'Interruption'});
+    timer._elapsedSeconds = 300;
+    timer._saveTimerState();
+    clock.seconds += 60;
+    timer._restoreTimerState();
+    equal(timer._elapsedSeconds, 360);
+    equal(timer._pausedSessions[0].elapsedSeconds, 3600);
+    equal(getWorkSessions(timer._settings).map(session => session.issue.iid), [3, 2]);
+});
+
+test('legacy timers migrate without losing their current duration', () => {
+    const {instance: timer} = indicator({'timer-state': JSON.stringify({running: true, paused: true,
+        elapsedSeconds: 1234, project: {id: 1}, issue: {iid: 2, title: 'Legacy'}})});
+    timer._restoreTimerState();
+    equal(timer._elapsedSeconds, 1234);
+    equal(timer._pausedSessions, []);
+    timer._saveTimerState();
+    equal(JSON.parse(timer._settings.get_string('timer-state')).version, 2);
+});
+
+test('restoration rejects invalid paused sessions and deduplicates issue identities', () => {
+    const session = {project: {id: 4}, issue: {iid: 7, title: 'Paused'}, elapsedSeconds: 1200};
+    const {instance: timer} = indicator({'timer-state': JSON.stringify({running: false,
+        project: {id: 1}, issue: {iid: 2, title: 'Current'}, pausedSessions: [
+            null, {}, session, session, {...session, elapsedSeconds: -1},
+            {project: {id: 1}, issue: {iid: 2, title: 'Duplicate current'}, elapsedSeconds: 5},
+        ]})});
+    timer._restoreTimerState();
+    equal(timer._pausedSessions, [session]);
+});
+
+test('Doing queue uses configured labels, current assignee and manual board order', () => {
+    const {instance: timer, pending, respond} = indicator({'doing-labels': 'workflow::Doing,team A'});
+    timer._loadDoingQueue();
+    respond(0, {id: 42});
+    const url = pending[1].message.url;
+    assert(url.includes('assignee_id=42'));
+    assert(url.includes('order_by=relative_position&sort=asc'));
+    assert(url.includes('labels=workflow%3A%3ADoing%2Cteam%20A'));
+    respond(1, [{iid: 2, title: 'Already active'}, {iid: 9, title: 'First'}, {iid: 3, title: 'Second'}]);
+    equal(timer._queueSection.items.map(item => item.label.text), ['#9 — First', '#3 — Second']);
+    timer._queueSection.items[0].activate();
+    equal(timer._selectedIssue.iid, 9);
+    equal(timer._pausedSessions[0].issue.iid, 2);
+});
+
+test('stale queue responses and failed refreshes cannot overwrite the latest queue', () => {
+    const {instance: timer, pending, respond} = indicator();
+    timer._loadDoingQueue();
+    timer._loadDoingQueue();
+    respond(1, {id: 42});
+    respond(0, {id: 42});
+    equal(pending.length, 3);
+    respond(2, [{iid: 9, title: 'Latest'}]);
+    equal(timer._queueSection.items[0].label.text, '#9 — Latest');
+    timer._loadDoingQueue();
+    respond(3, {}, 401);
+    assert(timer._queueSection.items[0].label.text.includes('401'));
 });
 
 test('restore adds only saved active downtime, not earlier pauses', () => {
@@ -228,6 +376,8 @@ test('paused, legacy and clock-rollback states never gain phantom downtime', () 
             startTimestamp: 100, project: {id: 1}, issue: {iid: 2}, ...state}));
         timer._restoreTimerState();
         equal(timer._elapsedSeconds, 600);
+        if (state.paused)
+            assert(timer._timerPaused, 'Explicitly paused work must not auto-resume');
     }
 });
 
@@ -283,6 +433,26 @@ test('issue queries use ascending board position on every page and preserve filt
             per_page: '100', page: String(page), search: 'fix & test', in: 'title,description',
             assignee_username: 'alice', labels: 'doing,bug'});
     }
+});
+
+test('quick search includes interruptions outside Doing and ignores saved assignee filters', () => {
+    const {instance: picker, pending} = selector({'issue-filter-state': 'opened',
+        'issue-filter-assignee': 'me', 'issue-filter-labels': 'doing', 'issue-filter-search': 'interruption'});
+    picker._quickSearch = true;
+    picker._selectProject({id: 1});
+    equal(pending.length, 1);
+    const query = picker._buildIssueQuery(1);
+    assert(query.includes('state=all'));
+    assert(query.includes('search=interruption'));
+    assert(!query.includes('assignee') && !query.includes('labels='));
+});
+
+test('searching by issue number uses an exact issue IID query', () => {
+    const {instance: picker} = selector({'issue-filter-search': '#142'});
+    picker._quickSearch = true;
+    const query = picker._buildIssueQuery(1);
+    assert(query.includes('iids%5B%5D=142'));
+    assert(!query.includes('search='));
 });
 
 test('issue pagination preserves board order rather than sorting by issue ID', () => {

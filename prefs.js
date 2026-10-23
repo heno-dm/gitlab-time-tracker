@@ -66,6 +66,14 @@ export default class GitLabIssuesPreferences extends ExtensionPreferences {
         defaultProjectRow.add_suffix(clearDefaultProjectButton);
         defaultProjectGroup.add(defaultProjectRow);
 
+        const doingLabelsRow = new Adw.EntryRow({
+            title: _('Doing column labels'),
+            text: settings.get_string('doing-labels'),
+        });
+        doingLabelsRow.set_tooltip_text(_('Exact GitLab label names, comma-separated. Leave empty to show all your open issues.'));
+        doingLabelsRow.connect('changed', widget => settings.set_string('doing-labels', widget.get_text().trim()));
+        defaultProjectGroup.add(doingLabelsRow);
+
         // Timer configuration group
         const timerGroup = new Adw.PreferencesGroup({
             title: _('Timer Configuration'),
@@ -111,7 +119,7 @@ export default class GitLabIssuesPreferences extends ExtensionPreferences {
         this._addShortcutRow(shortcutsGroup, settings, 'toggle-timer-shortcut', _('Start, pause, or resume timer'));
         this._addShortcutRow(shortcutsGroup, settings, 'stop-send-shortcut', _('Stop and send time'));
         this._addShortcutRow(shortcutsGroup, settings, 'cancel-timer-shortcut', _('Cancel timer'));
-        this._addShortcutRow(shortcutsGroup, settings, 'select-issue-shortcut', _('Select project and issue'));
+        this._addShortcutRow(shortcutsGroup, settings, 'select-issue-shortcut', _('Find or switch issue'));
         this._addShortcutRow(shortcutsGroup, settings, 'monthly-report-shortcut', _('Open monthly report'));
 
         // Reports configuration group

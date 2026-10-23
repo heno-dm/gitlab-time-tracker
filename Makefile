@@ -2,7 +2,7 @@ NAME = timelogs-extension
 UUID = $(NAME)@heno-dm.github.io
 EXTENSION_PATH = $(HOME)/.local/share/gnome-shell/extensions/$(UUID)
 
-.PHONY: build install pot clean remove test-shell test-prefs test-regressions help
+.PHONY: build install pot clean remove test-shell test-prefs test-regressions test-selector-ui help
 
 
 help:
@@ -17,6 +17,7 @@ help:
 	@echo "  test-shell  - Test extension in nested GNOME Shell"
 	@echo "  test-prefs  - Test extension preferences"
 	@echo "  test-regressions - Run headless GJS regression checks"
+	@echo "  test-selector-ui - Smoke-test the GTK search window (requires a display)"
 	@echo "  help        - Show this help message"
 
 
@@ -119,6 +120,10 @@ pot:
 
 test-regressions:
 	gjs -m tests/regressions.js
+
+
+test-selector-ui:
+	gjs -m tests/selector-ui.js
 
 
 test-shell: install

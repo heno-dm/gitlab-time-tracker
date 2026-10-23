@@ -27,6 +27,20 @@ export function serializeIssue(issue) {
     };
 }
 
+// Read-only view used by the external search window. The Shell owns all timers.
+export function getWorkSessions(settings) {
+    try {
+        const state = JSON.parse(settings.get_string('timer-state'));
+        const sessions = Array.isArray(state.pausedSessions) ? [...state.pausedSessions] : [];
+        if (state.running && state.project && state.issue)
+            sessions.unshift({project: state.project, issue: state.issue, elapsedSeconds: state.elapsedSeconds});
+        return sessions.filter(session => session?.project?.id && session?.issue?.iid &&
+            typeof session.issue.title === 'string' && Number.isFinite(session.elapsedSeconds) && session.elapsedSeconds >= 0);
+    } catch (e) {
+        return [];
+    }
+}
+
 export function getRecentIssues(settings) {
     try {
         const value = settings.get_string('recent-issues');

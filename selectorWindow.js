@@ -3,13 +3,17 @@
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
+import Gdk from 'gi://Gdk?version=4.0';
 import Gtk from 'gi://Gtk?version=4.0';
 import Soup from 'gi://Soup?version=3.0';
+import Gettext from 'gettext';
 
-import {getDefaultProject, getProjectsCache, getRecentIssues, serializeIssue, serializeProject, setProjectsCache} from './state.js';
+import {getDefaultProject, getProjectsCache, getWorkSessions, serializeIssue, serializeProject, setProjectsCache} from './state.js';
 
 const SCHEMA_ID = 'org.gnome.shell.extensions.timelogs-extension';
-const _ = (text) => text;
+const [scriptPath] = GLib.filename_from_uri(import.meta.url);
+Gettext.bindtextdomain('timelogs-extension@heno-dm.github.io', `${GLib.path_get_dirname(scriptPath)}/locale`);
+const _ = Gettext.domain('timelogs-extension@heno-dm.github.io').gettext;
 
 function getSettings() {
     const [scriptPath] = GLib.filename_from_uri(import.meta.url);
@@ -33,9 +37,9 @@ class SelectorWindow extends Gtk.ApplicationWindow {
     _init(application) {
         super._init({
             application,
-            title: _('GitLab Issue Selector'),
-            default_width: 900,
-            default_height: 720,
+            title: _('Switch issue'),
+            default_width: 760,
+            default_height: 620,
         });
 
         this._settings = getSettings();
@@ -54,10 +58,18 @@ class SelectorWindow extends Gtk.ApplicationWindow {
         this._currentUser = null;
         this._currentUserError = null;
         this._closed = false;
+        this._quickSearch = true;
 
         this._buildUi();
+        this.connect('close-request', () => {
+            this._cleanup();
+            return false;
+        });
         this._loadCurrentUser();
-        this._loadProjects();
+        if (this._defaultProject)
+            this._selectProject(this._defaultProject);
+        else
+            this._loadProjects();
     }
 
     _buildUi() {
@@ -72,10 +84,17 @@ class SelectorWindow extends Gtk.ApplicationWindow {
         this.set_child(root);
 
         const header = new Gtk.HeaderBar({
-            title_widget: new Gtk.Label({ label: _('Select a project and an issue') }),
+            title_widget: new Gtk.Label({ label: _('Find an issue and start working') }),
             show_title_buttons: true,
         });
         this.set_titlebar(header);
+        const changeProject = new Gtk.Button({label: _('Change project')});
+        changeProject.connect('clicked', () => {
+            this._projectPane.visible = !this._projectPane.visible;
+            if (this._projectPane.visible)
+                this._loadProjects();
+        });
+        header.pack_start(changeProject);
 
         const panes = new Gtk.Paned({
             orientation: Gtk.Orientation.HORIZONTAL,
@@ -86,6 +105,8 @@ class SelectorWindow extends Gtk.ApplicationWindow {
         root.append(panes);
 
         const projectPane = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 6 });
+        this._projectPane = projectPane;
+        projectPane.visible = !this._defaultProject;
         panes.set_start_child(projectPane);
         panes.set_resize_start_child(true);
         panes.set_shrink_start_child(false);
@@ -123,29 +144,40 @@ class SelectorWindow extends Gtk.ApplicationWindow {
         panes.set_resize_end_child(true);
         panes.set_shrink_end_child(false);
 
-        issuePane.append(new Gtk.Label({
-            label: _('Issue'),
+        this._projectTitle = new Gtk.Label({
+            label: _('Choose your project once to get started'),
             xalign: 0,
-        }));
+        });
+        issuePane.append(this._projectTitle);
 
-        this._recentBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 4 });
-        issuePane.append(this._recentBox);
-        this._updateRecentIssues();
-
-        this._issueSearchEntry = new Gtk.SearchEntry({ placeholder_text: _('Search issues on GitLab...') });
-        this._issueSearchEntry.set_text(this._settings.get_string('issue-filter-search'));
-        this._issueSearchEntry.connect('search-changed', () => {
+        this._issueSearchEntry = new Gtk.SearchEntry({ placeholder_text: _('Search all project issues by text or #number…') });
+        this._issueSearchEntry.connect('changed', () => {
             this._settings.set_string('issue-filter-search', this._issueSearchEntry.get_text());
+            this._updateWorkSuggestions();
             this._scheduleIssueReload();
         });
+        this._issueSearchEntry.connect('activate', () => this._sendSelection());
         issuePane.append(this._issueSearchEntry);
+        this._workBox = new Gtk.Box({orientation: Gtk.Orientation.VERTICAL, spacing: 4});
+        issuePane.append(this._workBox);
+        this._updateWorkSuggestions();
+
+        const useFilters = new Gtk.CheckButton({label: _('Use saved filters')});
+        issuePane.append(useFilters);
 
         const filters = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 6 });
+        filters.visible = false;
+        useFilters.connect('toggled', button => {
+            this._quickSearch = !button.active;
+            filters.visible = button.active;
+            this._reloadIssues();
+        });
         issuePane.append(filters);
 
         this._issueStateValues = ['opened', 'closed', 'all'];
         this._issueStateDropdown = Gtk.DropDown.new_from_strings(this._issueStateValues.map(state => this._stateLabel(state)));
-        this._issueStateDropdown.set_selected(this._issueStateValues.indexOf(this._getIssueState()));
+        const savedState = this._settings.get_string('issue-filter-state');
+        this._issueStateDropdown.set_selected(Math.max(0, this._issueStateValues.indexOf(savedState)));
         this._issueStateDropdown.connect('notify::selected', widget => {
             const selected = widget.get_selected();
             const state = this._issueStateValues[selected] || 'opened';
@@ -187,6 +219,19 @@ class SelectorWindow extends Gtk.ApplicationWindow {
             this._selectedIssue = row?._issue || null;
             this._selectButton.sensitive = Boolean(this._selectedProject && this._selectedIssue);
         });
+        this._issueList.connect('row-activated', () => this._sendSelection());
+        const searchKeys = new Gtk.EventControllerKey({propagation_phase: Gtk.PropagationPhase.CAPTURE});
+        searchKeys.connect('key-pressed', (_controller, key) => {
+            if (key !== Gdk.KEY_Down && key !== Gdk.KEY_Up)
+                return false;
+            const selected = this._issueList.get_selected_row();
+            const index = Math.max(0, (selected?.get_index() ?? -1) + (key === Gdk.KEY_Down ? 1 : -1));
+            const row = this._issueList.get_row_at_index(index);
+            if (row)
+                this._issueList.select_row(row);
+            return true;
+        });
+        this._issueSearchEntry.add_controller(searchKeys);
 
         const issueScroll = new Gtk.ScrolledWindow({
             child: this._issueList,
@@ -212,13 +257,28 @@ class SelectorWindow extends Gtk.ApplicationWindow {
         actions.append(cancelButton);
 
         this._selectButton = new Gtk.Button({
-            label: _('Select'),
+            label: _('Switch and start'),
             sensitive: false,
             receives_default: true,
         });
         this._selectButton.connect('clicked', () => this._sendSelection());
         actions.append(this._selectButton);
         this.set_default_widget(this._selectButton);
+        const openButton = new Gtk.Button({label: _('Open in GitLab')});
+        openButton.connect('clicked', () => {
+            if (this._selectedIssue?.web_url)
+                Gio.AppInfo.launch_default_for_uri(this._selectedIssue.web_url, null);
+        });
+        actions.prepend(openButton);
+        const windowKeys = new Gtk.EventControllerKey({propagation_phase: Gtk.PropagationPhase.CAPTURE});
+        windowKeys.connect('key-pressed', (_controller, key) => {
+            if (key !== Gdk.KEY_Escape)
+                return false;
+            this.close();
+            return true;
+        });
+        this.add_controller(windowKeys);
+        this._issueSearchEntry.grab_focus();
     }
 
     _apiGet(path, onSuccess, onError = null, collectPages = false) {
@@ -272,11 +332,11 @@ class SelectorWindow extends Gtk.ApplicationWindow {
     _loadCurrentUser() {
         this._apiGet('/user', data => {
             this._currentUser = data;
-            if (this._settings.get_string('issue-filter-assignee').trim().toLowerCase() === 'me')
+            if (!this._quickSearch && this._settings.get_string('issue-filter-assignee').trim().toLowerCase() === 'me')
                 this._reloadIssues();
         }, error => {
             this._currentUserError = error;
-            if (this._settings.get_string('issue-filter-assignee').trim().toLowerCase() === 'me')
+            if (!this._quickSearch && this._settings.get_string('issue-filter-assignee').trim().toLowerCase() === 'me')
                 this._reloadIssues();
         });
     }
@@ -334,6 +394,9 @@ class SelectorWindow extends Gtk.ApplicationWindow {
         this._selectedProject = project;
         this._selectedIssue = null;
         this._selectButton.sensitive = false;
+        this._projectPane.visible = false;
+        this._projectTitle.label = project.path_with_namespace;
+        this._updateWorkSuggestions();
         this._loadIssues(project.id);
     }
 
@@ -401,7 +464,7 @@ class SelectorWindow extends Gtk.ApplicationWindow {
 
     _loadIssuesPage(projectId, page, append) {
         const requestSerial = ++this._issueRequestSerial;
-        if (this._settings.get_string('issue-filter-assignee').trim().toLowerCase() === 'me' && !this._currentUser) {
+        if (!this._quickSearch && this._settings.get_string('issue-filter-assignee').trim().toLowerCase() === 'me' && !this._currentUser) {
             this._issueLoading = false;
             this._loadMoreButton.sensitive = false;
             this._issueStatusLabel.label = this._currentUserError || _('Loading current user...');
@@ -441,13 +504,18 @@ class SelectorWindow extends Gtk.ApplicationWindow {
             ['page', String(page)],
         ];
 
-        const search = this._settings.get_string('issue-filter-search').trim();
+        const search = this._issueSearchEntry ? this._issueSearchEntry.get_text().trim()
+            : this._settings.get_string('issue-filter-search').trim();
         if (search) {
-            params.push(['search', search]);
-            params.push(['in', 'title,description']);
+            if (/^#?\d+$/.test(search)) {
+                params.push(['iids[]', search.replace(/^#/, '')]);
+            } else {
+                params.push(['search', search]);
+                params.push(['in', 'title,description']);
+            }
         }
 
-        const assignee = this._settings.get_string('issue-filter-assignee').trim();
+        const assignee = this._quickSearch ? '' : this._settings.get_string('issue-filter-assignee').trim();
         if (assignee) {
             const normalized = assignee.toLowerCase();
             if (normalized === 'none' || normalized === 'unassigned') {
@@ -460,7 +528,7 @@ class SelectorWindow extends Gtk.ApplicationWindow {
             }
         }
 
-        const labels = this._settings.get_string('issue-filter-labels').trim();
+        const labels = this._quickSearch ? '' : this._settings.get_string('issue-filter-labels').trim();
         if (labels)
             params.push(['labels', labels]);
 
@@ -470,6 +538,8 @@ class SelectorWindow extends Gtk.ApplicationWindow {
     }
 
     _getIssueState() {
+        if (this._quickSearch)
+            return 'all';
         const state = this._settings.get_string('issue-filter-state');
         return ['opened', 'closed', 'all'].includes(state) ? state : 'opened';
     }
@@ -486,6 +556,7 @@ class SelectorWindow extends Gtk.ApplicationWindow {
     }
 
     _updateIssueList() {
+        const previousIid = this._selectedIssue?.iid;
         this._clearListBox(this._issueList);
         this._selectedIssue = null;
         this._selectButton.sensitive = false;
@@ -503,7 +574,11 @@ class SelectorWindow extends Gtk.ApplicationWindow {
                 margin_end: 8,
             }));
             this._issueList.append(row);
+            if (issue.iid === previousIid)
+                this._issueList.select_row(row);
         }
+        if (!this._selectedIssue && this._issues.length > 0)
+            this._issueList.select_row(this._issueList.get_row_at_index(0));
 
         if (this._issues.length === 0 && !this._issueLoading)
             this._issueStatusLabel.label = this._selectedProject ? _('No issues found') : _('Select a project first');
@@ -513,37 +588,31 @@ class SelectorWindow extends Gtk.ApplicationWindow {
         this._loadMoreButton.sensitive = this._issueHasMore && !this._issueLoading;
     }
 
-    _updateRecentIssues() {
-        const recentIssues = getRecentIssues(this._settings);
-        if (recentIssues.length === 0)
+    _updateWorkSuggestions() {
+        this._clearListBox(this._workBox);
+        const query = this._issueSearchEntry.get_text().trim().toLowerCase().replace(/^#/, '');
+        const sessions = getWorkSessions(this._settings).filter(session =>
+            (!this._selectedProject || session.project.id === this._selectedProject.id) &&
+            (!query || `${session.issue.iid} ${session.issue.title}`.toLowerCase().includes(query)));
+        this._workBox.visible = sessions.length > 0;
+        if (sessions.length === 0)
             return;
-
-        this._recentBox.append(new Gtk.Label({
-            label: _('Recently worked issues'),
-            xalign: 0,
-        }));
-
-        const recentList = new Gtk.ListBox({ selection_mode: Gtk.SelectionMode.NONE });
-        this._recentBox.append(recentList);
-
-        for (const recent of recentIssues) {
-            const row = new Gtk.ListBoxRow({ activatable: true });
-            row.set_child(new Gtk.Label({
-                label: `#${recent.issue.iid} - ${recent.issue.title}\n${recent.project.path_with_namespace}`,
-                xalign: 0,
-                wrap: true,
-                margin_top: 6,
-                margin_bottom: 6,
-                margin_start: 8,
-                margin_end: 8,
-            }));
+        this._workBox.append(new Gtk.Label({label: _('Work in progress — click to resume'), xalign: 0}));
+        const list = new Gtk.ListBox({selection_mode: Gtk.SelectionMode.NONE});
+        for (const session of sessions) {
+            const minutes = Math.floor(session.elapsedSeconds / 60);
+            const row = new Gtk.ListBoxRow({activatable: true, child: new Gtk.Label({
+                label: `#${session.issue.iid} — ${session.issue.title} (${minutes}m)`,
+                xalign: 0, margin_top: 4, margin_bottom: 4,
+            })});
             row.connect('activate', () => {
-                this._selectedProject = recent.project;
-                this._selectedIssue = recent.issue;
+                this._selectedProject = session.project;
+                this._selectedIssue = session.issue;
                 this._sendSelection();
             });
-            recentList.append(row);
+            list.append(row);
         }
+        this._workBox.append(new Gtk.ScrolledWindow({child: list, max_content_height: 150, propagate_natural_height: true}));
     }
 
     _sendSelection() {
@@ -568,7 +637,7 @@ class SelectorWindow extends Gtk.ApplicationWindow {
         }
     }
 
-    close() {
+    _cleanup() {
         if (this._closed)
             return;
 
@@ -578,9 +647,11 @@ class SelectorWindow extends Gtk.ApplicationWindow {
             this._issueReloadId = null;
         }
         this._httpSession.abort();
+    }
+
+    close() {
+        this._cleanup();
         super.close();
-        this._httpSession = null;
-        this._settings = null;
     }
 });
 
@@ -590,6 +661,11 @@ const app = new Gtk.Application({
 });
 
 app.connect('activate', application => {
+    if (application.active_window) {
+        application.active_window.present();
+        application.active_window._issueSearchEntry.grab_focus();
+        return;
+    }
     const window = new SelectorWindow(application);
     window.present();
 });

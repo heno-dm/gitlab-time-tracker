@@ -13,7 +13,9 @@ For the maintained project, releases, support, and contributions, use the [upstr
 ## Features
 
 - Timer controls in the GNOME top bar
-- GitLab project and issue selection
+- One-click switching between independently saved issue timers
+- Your Doing queue in manual board order
+- A keyboard-friendly search window for other issues in your project
 - Server-side issue search and filtering by state, assignee, and labels
 - Start, pause, resume, cancel, and submit tracked time
 - Configurable keyboard shortcuts
@@ -58,13 +60,21 @@ Create a token from your GitLab user preferences under **Access Tokens**. The to
 
 ## Usage
 
-1. Open the extension menu and select **Select project & issue**.
-2. Choose a project and filter its issues as needed.
-3. Select an issue and start the timer.
-4. Pause or resume the timer without losing elapsed time.
-5. Use **Stop & Send** to submit the elapsed time to GitLab, or **Cancel** to discard it.
+1. Open **Find another issue…** (or press `<Super><Alt>i`). Choose your project on first use; subsequent searches open directly in that project.
+2. Search by title/description or exact issue number (`#142`). Use arrow keys and Enter, double-click a result, or click **Switch and start**. **Open in GitLab** lets you inspect details without switching.
+3. The selected issue starts tracking immediately. Switching issues pauses and preserves the previous timer; selecting paused work resumes its accumulated time. Only one issue runs at once.
+4. The top-bar menu shows **Working on**, **Paused work**, and **My Doing — board order**. Click an issue in your Doing queue to start it directly.
+5. Click **Submit** beside an active or paused duration to edit the duration, add a comment, and send it to GitLab. Use **Pause/Resume** for the current timer; **Cancel** discards only the current timer, not other paused work.
 
-**Stop & Send** pauses the timer while you edit and submit the entry. Cancelling the dialog or a failed submission leaves the timer paused, with its tracked time preserved for retry or resume. Issue selection is blocked until the current timer is submitted or cancelled.
+Submitting the current issue pauses it and stops its timer on success. Submitting a paused issue leaves the active timer running. Cancelling the dialog or a failed submission preserves all unsubmitted time. Switching is blocked only while a time-entry dialog or submission is in progress.
+
+Timers persist across restarts even when an issue leaves Doing. Explicitly paused timers stay paused; the automatic-resume preferences apply only to the previously running timer. Existing single-timer state is migrated automatically.
+
+### Your Doing queue
+
+The queue refreshes whenever the top-bar menu opens. It uses the default project, the authenticated GitLab user as assignee, and the exact **Doing column labels** configured in preferences (default: `doing`). For scoped labels, enter the full name, for example `workflow::Doing`. Leave the labels empty to show all your open issues. Up to 20 untracked issues from the first 100 results are shown; **Find more issues…** opens the searchable full list.
+
+GitLab remains the place for reading user stories, checking Definition of Done, commenting, and moving work to Verify. The extension never changes issue labels or board state.
 
 GitLab accepts submitted durations in forms such as `30m`, `2h`, or `2h30m`. The minimum submitted duration is one minute.
 
@@ -78,7 +88,7 @@ Filtering is performed by GitLab's API, which avoids loading every issue in larg
 - **Labels** accepts comma-separated GitLab labels, such as `bug,frontend`.
 - **Load more issues** retrieves another page when more than 100 results match.
 
-Issue filters persist between selector sessions.
+Search includes all issues in your project by default, so interruptions outside Doing are easy to find. Enable **Use saved filters** to apply the state, assignee, and label filters; these filter values persist between sessions. The search text starts empty each time.
 
 Issues follow GitLab's manual board order (relative position, top to bottom), rather than issue number or creation date. Filtering and loading more results preserve that order. Boards sorted by other fields, such as due date, may display a different order.
 
@@ -87,7 +97,7 @@ Issues follow GitLab's manual board order (relative position, top to bottom), ra
 - `<Super><Alt>t`: Start, pause, or resume; open issue selection when none is selected
 - `<Super><Alt>s`: Stop and submit tracked time
 - `<Super><Alt>c`: Cancel the timer
-- `<Super><Alt>i`: Open project and issue selection
+- `<Super><Alt>i`: Find or switch issue
 - `<Super><Alt>r`: Open the monthly report
 
 Shortcuts can be changed or disabled in the preferences.
@@ -112,14 +122,15 @@ This is a GNOME Shell extension written in JavaScript and loaded directly by GNO
 
 - `extension.js`: runtime entry point and top-bar integration
 - `prefs.js`: preferences entry point
-- `issueSelector.js`: project and issue selection
-- `reportDialog.js`: report retrieval and presentation
-- `avatarLoader.js`: shared avatar loading
+- `selectorWindow.js`: standalone GTK issue search and switching
+- `reportWindow.js`: standalone GTK monthly reports
+- `state.js`: shared serialization, default project, and work-session snapshots
+- `timeEntryDialog.js`: Shell duration/comment submission dialog
 - `schemas/`: GSettings schema and persistent configuration
 - `po/`: gettext translation sources
 - `metadata.json`: extension identity and supported GNOME Shell versions
 
-GitLab requests use API v4 with the `PRIVATE-TOKEN` header. Timer and selected-project state are serialized as JSON in the GSettings `timer-state` value so they can survive extension reloads, lock screens, logout, and restart.
+GitLab requests use API v4 (and GraphQL for reports) with the `PRIVATE-TOKEN` header. Version 2 of the GSettings `timer-state` JSON stores the current timer, selected issue, and an array of paused sessions keyed by project ID and issue IID. Existing single-timer fields are retained for migration.
 
 The extension UUID is `timelogs-extension@heno-dm.github.io`. Its GSettings schema is separate from upstream, so both extensions can coexist without sharing configuration.
 
@@ -133,6 +144,9 @@ make build
 
 # Run headless regression checks (requires gjs, no GNOME session needed)
 make test-regressions
+
+# Smoke-test the GTK search window with mock data (requires a display)
+make test-selector-ui
 
 # Build and install into the current user's GNOME extensions directory
 make install

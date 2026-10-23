@@ -19,7 +19,7 @@
     <key name="timer-state" type="s">
       <default>'{}'</default>
       <summary>Timer State</summary>
-      <description>JSON string containing the current timer state (for persistence across lock screen)</description>
+      <description>Versioned JSON containing the current timer and paused issue sessions, preserved across lock, logout and restart</description>
     </key>
     <key name="recent-issues" type="s">
       <default>'[]'</default>
@@ -35,6 +35,11 @@
       <default>'{}'</default>
       <summary>Default Project</summary>
       <description>JSON object containing the default project used by the issue selector</description>
+    </key>
+    <key name="doing-labels" type="s">
+      <default>'doing'</default>
+      <summary>Doing queue labels</summary>
+      <description>Comma-separated labels identifying the Doing column. The queue shows open issues assigned to the current user in the default project.</description>
     </key>
     <key name="projects-cache" type="s">
       <default>'{}'</default>
