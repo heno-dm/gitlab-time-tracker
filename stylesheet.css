@@ -1,8 +1,45 @@
-/* Timelogs Extension — layout-only rules; colours and widgets come from the Shell theme. */
+/* Timelogs Extension — layout-only rules; colours and widgets come from the Shell theme.
+   The only hard-coded colour is the warning dot (§2.12, §2.19). */
+
+.timelogs-numeric {
+    font-feature-settings: "tnum";
+}
+
+.timelogs-dim {
+    opacity: 0.7;
+}
+
+.timelogs-warning-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 3px;
+    background-color: #e5a50a;
+}
 
 .timelogs-subtitle {
     font-size: 0.9em;
     opacity: 0.7;
+}
+
+.timelogs-banner {
+    spacing: 8px;
+}
+
+.timelogs-active-column {
+    spacing: 4px;
+}
+
+.timelogs-active-buttons {
+    spacing: 6px;
+    padding-top: 4px;
+}
+
+.timelogs-button-content {
+    spacing: 6px;
+}
+
+.timelogs-primary-button {
+    font-weight: bold;
 }
 
 .timelogs-row-buttons {
@@ -13,9 +50,14 @@
     padding: 4px;
 }
 
+.timelogs-empty {
+    spacing: 2px;
+    padding: 8px 0;
+}
+
 .timelogs-submit-form {
     spacing: 8px;
-    min-width: 420px;
+    min-width: 440px;
 }
 
 .timelogs-submit-row {
@@ -24,6 +66,19 @@
 
 .timelogs-submit-label {
     min-width: 7em;
+}
+
+.timelogs-chips {
+    spacing: 6px;
+}
+
+.timelogs-chip {
+    padding: 2px 10px;
+    font-size: 0.9em;
+}
+
+.timelogs-error-row {
+    spacing: 6px;
 }
 
 .timelogs-error-label {

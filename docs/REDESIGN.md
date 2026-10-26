@@ -2,7 +2,9 @@
 
 Target repo: `heno-dm/gitlab-time-tracker` (UUID `timelogs-extension@heno-dm.github.io`)
 Audience: the implementing agent.
-Goal: same feature set, fewer clicks, no needless navigation, GNOME defaults everywhere. Visual design is **not** a goal: use stock Shell `PopupMenu`/`ModalDialog` widgets, stock libadwaita widgets, stock symbolic icons. No custom CSS beyond what is strictly needed for layout.
+Goal: same feature set, fewer clicks, no needless navigation, GNOME defaults everywhere — plus a full UX pass (every state designed, reminders, onboarding, accessibility).
+
+Visual reference: the design canvas "Timelogs Extension Redesign" has two pages. **Click redesign** = the first pass (§2.1–2.10). **Full redesign** = the complete target, specified in **§2.11–2.19**. Where §2.11+ conflicts with earlier sections, **§2.11+ wins** (each override is called out). Visual design is **not** a goal: use stock Shell `PopupMenu`/`ModalDialog` widgets, stock libadwaita widgets, stock symbolic icons. No custom CSS beyond what is strictly needed for layout.
 
 ---
 
@@ -161,7 +163,7 @@ Rules:
 
 | Row | Primary click (row) | Suffix buttons |
 |---|---|---|
-| Active session | Toggle pause/resume | Pause/Resume (`media-playback-pause-symbolic`/`media-playback-start-symbolic`), Submit (`document-send-symbolic`), Open in browser (`web-browser-symbolic`), Discard (`user-trash-symbolic`) |
+| Active session | *Not activatable* (§2.12 overrides) | Pause/Resume (`media-playback-pause-symbolic`/`media-playback-start-symbolic`), Submit (`document-send-symbolic`), Open in browser (`web-browser-symbolic`), Discard (`user-trash-symbolic`) |
 | Paused session | **Switch to it** (pause active, resume this) | Submit (`document-send-symbolic`) |
 | Doing issue | **Start it** (pause active) | — |
 | Search result | Start / switch to it | — (Open in browser via `Ctrl+Enter`, see §2.4) |
@@ -265,7 +267,7 @@ Details:
   - `resume-on-unlock=false` → `pause`
   - `resume-on-unlock=true, count-time-when-locked=false` → `resume-on-unlock`
   - `resume-on-unlock=true, count-time-when-locked=true` → `keep-counting`
-- Shortcuts subpage: one `Adw.EntryRow` per shortcut with apply button. Invalid input → `add_css_class('error')` on the row and do not save; empty → disable shortcut. (Keep it simple; a key-capture dialog is out of scope.)
+- Shortcuts subpage: one `Adw.EntryRow` per shortcut with apply button. Invalid input → `add_css_class('error')` on the row and do not save; empty → disable shortcut. (Superseded by §2.16: shortcut capture dialog.)
 - Report category filter is **not** in preferences (it lives in the report window, §2.10).
 - Remove the static "Information" text block.
 
@@ -301,7 +303,110 @@ Stays a separate process (`gjs -m report/main.js <projectId?>`), because Shell c
 - Export: `Adw.SplitButton`. Main click = last-used format (default CSV); dropdown menu contains "Export as CSV" and "Export as Markdown". Files go to Downloads (same names as today). After saving: `Adw.Toast` "Saved gitlab-report-…csv" with button **Open** (`Gio.AppInfo.launch_default_for_uri`). Errors also as toasts.
 - Loading: `Adw.Spinner` (libadwaita ≥ 1.6) or `Gtk.Spinner` centered while loading; errors as `Adw.StatusPage` with a **Retry** button.
 - Remove the debug log file.
-- Keep a small `CALENDAR_CSS` provider for the calendar heat map (day cells tinted with `@accent_bg_color` by share of the busiest day, accent border on today); use `.card` as the base style for day cells and `.dim-label` for empty days.
+- Remove the `CALENDAR_CSS` custom provider unless needed; use `.card` style class for day cells and `.dim-label` for empty days.
+
+### 2.11 Full redesign — what changes on top of §2.1–2.10
+
+| Area | Change | Spec |
+|---|---|---|
+| Top bar | Defined state set, "Top bar shows" option, warning dot | §2.12 |
+| Menu | Labelled primary buttons, non-activatable active block, explicit empty/offline/no-result states, today total | §2.13 |
+| Submit dialog | Amount on the button, quick-adjust chips, live validation | §2.14 |
+| Reminders | Idle time, long timer, lock restore, stale sessions | §2.15 |
+| Preferences | Step-based onboarding with banner, account row, dropdown-only options, shortcut capture | §2.16 |
+| Report | Summary stats, category drill-down, calendar day details, copy to clipboard, designed states, default user = Me | §2.17 |
+| Language | Fixed terminology and duration formats | §2.18 |
+| Accessibility | Checklist | §2.19 |
+
+### 2.12 Top bar indicator states (overrides §2.1)
+
+| State | Icon | Text | Accessible name |
+|---|---|---|---|
+| Not configured | `timer-outline` + warning dot | — | "Time tracking, not set up" |
+| Idle | `timer-outline` | — | "Time tracking, idle" |
+| Running | `timer-play-outline` | per `panel-content` | "Tracking #142, 1 hour 23 minutes" |
+| Paused | `timer-pause-outline` | time, dimmed (`.dim-label` opacity) | "Paused #142 at 1 hour 23 minutes" |
+| Submitting | `document-send-symbolic` (upload) | time | "Submitting time for #98" |
+| Offline / auth error | running/paused icon + warning dot | time | adds ", GitLab not reachable" |
+
+- Key `panel-content` ∈ `time` (default) | `issue-and-time` (`#142 · 1:23`) | `icon` (replaces `show-panel-time`).
+- Warning dot = small `St.Widget` badge using the Shell warning color; always paired with a menu banner explaining it.
+- Update the accessible name at most once per minute (not every tick).
+
+### 2.13 Menu — final layout and states (overrides §2.2/§2.3 where noted)
+
+Order: [Banner] → Search → Active block → Paused → Doing → Footer.
+
+- **Banner** (new, top, only when needed): one row, warning style (Shell `.message`-like surface; warning icon + text + one action button). Cases: not configured → "Set up GitLab…" (row replaces the banner, see §2.9); auth error → "GitLab rejected the token · Settings"; offline → "Can't reach <host> · Retry". Never more than one banner; priority auth > offline.
+- **Active block**: not activatable (overrides §2.3 "toggle on click"). Buttons: **Pause/Resume** (icon + label), **Submit…** (icon + label, suggested-action style), Open in browser (icon), spacer, **Discard** (icon, far right). Keyboard: `Space` on the focused block toggles pause.
+- **Paused heading** shows the unsubmitted sum: "Paused · 0:47 not submitted". A row in `sending` state shows "Submitting…" instead of its time, is insensitive and has no submit button.
+- **Doing heading**: while idle "Doing — click to start" and rows get a leading `media-playback-start-symbolic` glyph; while tracking just "Doing". When rendering stale cache after a failed refresh: "Doing · from 14:02".
+- **Search, no results**: centered two-line message "No open issues match “q”" / "Searched group/app and group/lib", then rows **Include closed issues** (re-runs search with `state=all`) and **Search on GitLab** (opens `<url>/search?search=q`, or the project issue search when one project). Clear button (`edit-clear-symbolic`) inside the entry when it has text.
+- **Search offline**: placeholder becomes "Search your sessions (offline)"; only local matches.
+- **Footer**: "Report" with suffix "Today 3h 10m" (sum of today's successful submits from `submit-log`, hidden when 0), then "Settings".
+
+### 2.14 Submit dialog — final (extends §2.5)
+
+- Primary button label repeats the amount and updates live: "Submit 1h 23m". Disabled + label "Submit" while invalid.
+- Under the duration field: three chips (`St.Button`, `.button` small): "Round to 15m → 1h 30m" (step from `rounding-minutes`; hidden if already aligned or setting = 0), "−15m", "+15m". Chips edit the field, never below 1m.
+- Validation on every change with the existing regex; message under the field: "Use a format like 1h 30m, 45m or 2h" with an error icon. Never clear the comment.
+- Comment placeholder "What did you do? (optional)".
+
+### 2.15 Reminders (new)
+
+All are `MessageTray` notifications with actions (§4.2 `notifyWithActions`); none are modal.
+
+| Reminder | Trigger | Text | Actions | No action = |
+|---|---|---|---|---|
+| Idle time | User was idle ≥ `idle-minutes` while a session ran; fire on return | "You were away for 25 minutes" / "The timer on #142 kept running." | **Remove 25 min**, **Keep** | Keep |
+| Long timer | Active session running ≥ `long-timer-hours` (once per session) | "Timer running for 9 hours" / issue title | **Submit…**, **Pause**, **Keep** | Keep |
+| Lock restore | `lock-behaviour = pause` and a running session was paused by lock | "Paused while the screen was locked" / "#142 · 1:23 kept. Locked for 40 minutes." | **Resume**, **Add 40 min** | stays paused |
+| Stale sessions | First enable of a calendar day and paused sessions older than today exist | "3 paused sessions, 2h 10m not submitted" / "Oldest from yesterday." | **Review** (opens menu) | — |
+
+Implementation notes:
+- Idle: `global.backend.get_core_idle_monitor()` (`Meta.IdleMonitor`) — `add_idle_watch(idle-minutes*60000, cb)` records `idleStart = now - threshold`; `add_user_active_watch(cb)` on return fires the notification with `awaySeconds = now - idleStart`. "Remove" calls `SessionStore.subtract(key, awaySeconds)` (new method; clamps at 0).
+- Lock restore uses `lastSeenAt` from §4.2 `lockPolicy`; "Add N min" calls `SessionStore.add(key, seconds)` then resumes.
+- Lock behaviour options renamed for the combo: "Pause and tell me" (`pause`), "Keep counting" (`keep-counting`), "Pause, resume on unlock" (`resume-on-unlock`).
+- `SessionStore` gains `add(key, seconds)` and `subtract(key, seconds)`; both emit `changed` and save.
+
+### 2.16 Preferences — final (overrides §2.8 layout)
+
+**Not connected** (no URL/token, or last check failed with auth error): page starts with `Adw.Banner` ("Not connected to GitLab" warning, or "Token rejected — tracking still works, submitting doesn't" error). Then a header block (`Adw.StatusPage`-like: timer icon, "Track GitLab time from the top bar", "Three steps. Everything else is optional."). Then one boxed list of three numbered steps:
+1. GitLab server — `Adw.EntryRow` with apply. Prefix: numbered badge, green check when valid.
+2. Access token — `Adw.PasswordEntryRow` with apply + suffix button "Create token…". On failure the row gets `.error` and a following non-activatable row shows the reason in words ("GitLab answered 401: the token is expired, revoked or missing the api scope.").
+3. Choose projects — insensitive until connected; opens the Tracked projects subpage.
+
+**Connected**: groups
+- *GitLab*: account row "Jane Doe (@jane)" / "Connected to <host>" → subpage with URL, token, Create token…, Sign out (clears token). Tracked projects row → subpage (§2.8). Doing labels `Adw.EntryRow`.
+- *Timer*: `Adw.ComboRow`s only — Top bar shows (`panel-content`), When the screen locks (`lock-behaviour`), Ask about idle time (`idle-minutes`: Off, 5, 10, 15, 30), Remind me of long timers (`long-timer-hours`: Off, 4, 6, 8, 10), Rounding step (`rounding-minutes`: Off, 5, 6, 10, 15, 30).
+- *Keyboard shortcuts* row → subpage.
+
+**Shortcuts subpage**: one `Adw.ActionRow` per shortcut with a `Gtk.ShortcutLabel` suffix (or "Disabled"). Activating a row opens an `Adw.Dialog` (fallback `Adw.Window` modal on older libadwaita): "Press the new shortcut for <name>", keyboard illustration, "Esc to cancel · Backspace to disable". Capture with `Gtk.EventControllerKey`, validate with `Gtk.accelerator_valid`, reject conflicts with the other four shortcuts (inline error text in the dialog). "Reset all" button below the list.
+
+### 2.17 Report — final (extends §2.10)
+
+- Toolbar row: big month title, Project dropdown, User dropdown (**default = Me**, options Me, Everyone, each author), Categories filter button whose label lists the active filters.
+- Summary card (4 cells): Total this month · Issues · Average per working day (Mon–Fri up to today or month end) · Change vs previous month (needs one extra timelogs query for the previous month; load after the main data; show "—" until loaded).
+- **Categories view**: one boxed list; each category row has expander chevron, name, bar, hours. Expanded → child rows: issue `#iid title`, hours, open-in-browser icon. "Other" uses a neutral bar. When User = Everyone, the user × category table (existing, with Columns chooser) appears below the list.
+- **Calendar view**: Mon–Sun grid + "Week" total column. Each day cell: day number, hours as text, small bar. Weekends and future days dimmed; today outlined; selected day highlighted. Side card lists the selected day's entries (issue, timelog `summary`, hours). Add `summary` to the GraphQL query.
+- Export split button menu: Export as CSV, Export as Markdown, separator, Copy as Markdown, Copy as CSV (clipboard via `Gdk.Clipboard.set`); toast "Copied report to clipboard".
+- States (`Adw.ViewStack` pages or `Adw.StatusPage`): **Loading** — spinner + "Loading time entries… N of about M" (GraphQL `count` if available, else "N loaded"); **Empty** — "No time tracked in <Month>" + sentence naming the filters + buttons "Show Everyone" (if User ≠ Everyone) and "Go to <previous month>"; **Error** — plain cause, suggested-action "Retry", small detail line.
+- Shortcuts: Alt+←/→ month, Ctrl+1/2 view, Ctrl+E export (last format), Ctrl+Shift+C copy Markdown, Ctrl+R/F5 reload. Register via `Gtk.Application.set_accels_for_action`.
+
+### 2.18 Language
+
+Use exactly: **Session**, **Active**, **Paused**, **Submit** (never Send/Stop), **Discard** (never Cancel for time), **Doing**, **Tracked projects**. "Cancel" only closes dialogs.
+
+Duration formats: top bar `1:23`; active block `1:23:45`; lists `0:42`; submit/notifications `1h 23m`; reports `38.0 h`. All numeric labels use tabular figures (`font-feature-settings: "tnum"` in `stylesheet.css` for Shell labels; `.numeric` style class in GTK).
+
+### 2.19 Accessibility checklist
+
+- Every icon-only button: `accessible_name` + tooltip (Shell: `St.Button` `accessible_name`; GTK: `tooltip_text` + `update_property(LABEL)`).
+- Panel accessible name per §2.12; ticks don't re-announce.
+- No state conveyed by color only (icon/word always present).
+- Errors are text next to the field, connected with `Gtk.AccessibleRelation.DESCRIBED_BY` in GTK.
+- No hard-coded font sizes or colors besides the warning dot; inherit Shell/Adwaita styles so large text and high contrast work.
+- Full keyboard paths for every flow (verify with the table in §2.4 and §2.17).
 
 ---
 
@@ -561,6 +666,13 @@ Keep today's output formats byte-compatible.
 | `report-view` | **new** `s`, default `'categories'` | |
 | `report-user` | **new** `s`, default `''` | `''` = Everyone |
 | `report-export-format` | **new** `s`, default `'csv'` | Split button default |
+| `report-user` default | `'me'` | Overrides `''` above; `'me'` resolves to the cached user |
+| `panel-content` | **new** `s`, default `'time'` | `time` \| `issue-and-time` \| `icon`; replaces `show-panel-time` |
+| `idle-minutes` | **new** `i`, default `10` | `0` = off |
+| `long-timer-hours` | **new** `i`, default `8` | `0` = off |
+| `rounding-minutes` | **new** `i`, default `15` | `0` = no round chip |
+| `submit-log` | **new** `s`, default `'[]'` | `[{key, seconds, at}]` of successful submits, pruned to 31 days; feeds "Today" total |
+| `last-stale-check` | **new** `s`, default `''` | ISO date of last stale-session reminder |
 | 5 × `*-shortcut` | keep | |
 | `default-project` | **remove after migration** | Keep key in schema one release so migration can read it, then drop |
 | `resume-on-unlock`, `count-time-when-locked` | **remove after migration** | Same |
@@ -622,10 +734,14 @@ Timer state v2 → v3 mapping:
 6. Preferences rework (apply + connection check, token link, tracked projects subpage, lock combo, shortcut subpage, libsecret).
 7. Report: extract `reportData.js`/`exporters.js` with tests, then rebuild UI with libadwaita; drop `/users` call and log file.
 8. Delete dead files, update Makefile, README, AGENTS.md, translations.
+9. Full redesign layer: indicator states + `panel-content` (§2.12), menu banner/empty/offline states + today total (§2.13), submit chips/validation (§2.14).
+10. Reminders (§2.15) incl. `SessionStore.add/subtract` + tests (idle remove, lock add, long-timer once).
+11. Preferences onboarding + connected layout + shortcut capture (§2.16).
+12. Report summary, drill-down, calendar day panel, clipboard, states, shortcuts (§2.17). Final pass against §2.18/§2.19.
 
 ## 10. Explicitly out of scope
 
 - Visual theming, custom colours, avatars.
 - Editing issue labels/board state (the extension stays read-only on issues apart from spent time — same as today).
-- Saved issue filters UI. If needed later, add inline search tokens (`label:bug`, `@user`, `is:closed`) parsed in `IssueSource.search` — zero extra UI.
+- Saved issue filters UI (the "Include closed issues" row in §2.13 covers the common case). If needed later, add inline search tokens (`label:bug`, `@user`, `is:closed`) parsed in `IssueSource.search` — zero extra UI.
 - "Submit all paused" batch flow and "submit but keep tracking" — candidates for a later iteration.

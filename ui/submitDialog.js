@@ -1,22 +1,28 @@
-// Shell ModalDialog for editing the duration and comment before sending time.
+// Shell ModalDialog for editing the duration and comment before submitting time
+// (§2.5, §2.14): live amount on the button, quick-adjust chips, inline validation.
 import Clutter from 'gi://Clutter';
 import GObject from 'gi://GObject';
 import St from 'gi://St';
 import * as Dialog from 'resource:///org/gnome/shell/ui/dialog.js';
 import * as ModalDialog from 'resource:///org/gnome/shell/ui/modalDialog.js';
 
-import {isValidGitLabDuration} from '../core/format.js';
+import {adjustDuration, formatHuman, parseGitLabDuration, roundToStep, toEditableDuration} from '../core/format.js';
+
+const DEFAULT_STEP_MINUTES = 15;
 
 export const SubmitDialog = GObject.registerClass(
 class SubmitDialog extends ModalDialog.ModalDialog {
     /**
      * @param {{gettext: Function, project: object, issue: object, duration: string, comment?: string,
-     *          onSubmit: (duration: string, comment: string) => void}} params
+     *          roundingMinutes?: number, onSubmit: (duration: string, comment: string) => void}} params
      */
-    _init({gettext, project, issue, duration, comment = '', onSubmit}) {
+    _init({gettext, project, issue, duration, comment = '', roundingMinutes = DEFAULT_STEP_MINUTES, onSubmit}) {
         super._init({styleClass: 'timelogs-submit-dialog', destroyOnClose: true});
         const _ = gettext;
+        this._ = gettext;
         this._onSubmit = onSubmit;
+        this._rounding = Math.max(0, Math.floor(roundingMinutes));
+        this._step = this._rounding > 0 ? this._rounding : DEFAULT_STEP_MINUTES;
 
         const content = new Dialog.MessageDialogContent({
             title: _('Submit time'),
@@ -32,19 +38,32 @@ class SubmitDialog extends ModalDialog.ModalDialog {
             hint_text: _('For example: 1h 30m'),
             can_focus: true,
             x_expand: true,
+            style_class: 'timelogs-numeric',
         });
         form.add_child(this._row(_('Time spent'), this._durationEntry));
 
-        this._durationError = new St.Label({
-            text: _('Enter a duration such as 1h 30m'),
-            style_class: 'timelogs-error-label',
-            visible: false,
-        });
+        // Chips: "Round to 15m → 1h 30m", "−15m", "+15m".
+        const chips = new St.BoxLayout({style_class: 'timelogs-chips'});
+        this._roundChip = this._chip('', () => this._applyChip(seconds => roundToStep(seconds, this._step)));
+        chips.add_child(this._roundChip);
+        this._minusChip = this._chip(`−${this._step}m`, () => this._applyChip(seconds => adjustDuration(seconds, -this._step * 60)));
+        chips.add_child(this._minusChip);
+        this._plusChip = this._chip(`+${this._step}m`, () => this._applyChip(seconds => adjustDuration(seconds, this._step * 60)));
+        chips.add_child(this._plusChip);
+        form.add_child(this._indented(chips));
+
+        const error = new St.BoxLayout({style_class: 'timelogs-error-row', visible: false});
+        error.add_child(new St.Icon({icon_name: 'dialog-error-symbolic', style_class: 'popup-menu-icon', y_align: Clutter.ActorAlign.CENTER}));
+        this._durationErrorLabel = new St.Label({text: _('Use a format like 1h 30m, 45m or 2h'), style_class: 'timelogs-error-label',
+            y_align: Clutter.ActorAlign.CENTER});
+        error.add_child(this._durationErrorLabel);
+        this._durationError = this._indented(error);
+        this._durationError.visible = false;
         form.add_child(this._durationError);
 
         this._commentEntry = new St.Entry({
             text: comment,
-            hint_text: _('What did you do?'),
+            hint_text: _('What did you do? (optional)'),
             can_focus: true,
             x_expand: true,
         });
@@ -77,8 +96,31 @@ class SubmitDialog extends ModalDialog.ModalDialog {
         return row;
     }
 
+    /** Aligns a widget under the entry column (past the label column). */
+    _indented(child) {
+        const row = new St.BoxLayout({style_class: 'timelogs-submit-row', x_expand: true});
+        row.add_child(new St.Widget({style_class: 'timelogs-submit-label'}));
+        row.add_child(child);
+        return row;
+    }
+
+    _chip(text, onClick) {
+        const chip = new St.Button({label: text, style_class: 'button timelogs-chip', can_focus: true, accessible_name: text});
+        chip.connect('clicked', () => onClick());
+        return chip;
+    }
+
+    _applyChip(transform) {
+        const seconds = parseGitLabDuration(this._durationEntry.get_text());
+        if (seconds === null)
+            return;
+        this._durationEntry.set_text(toEditableDuration(transform(seconds)));
+    }
+
     _validate() {
-        const valid = isValidGitLabDuration(this._durationEntry.get_text());
+        const _ = this._;
+        const seconds = parseGitLabDuration(this._durationEntry.get_text());
+        const valid = seconds !== null;
         this._durationError.visible = !valid;
         this._submitButton.reactive = valid;
         this._submitButton.can_focus = valid;
@@ -86,6 +128,24 @@ class SubmitDialog extends ModalDialog.ModalDialog {
             this._submitButton.remove_style_pseudo_class('insensitive');
         else
             this._submitButton.add_style_pseudo_class('insensitive');
+        this._submitButton.label = valid ? _('Submit %s').format(formatHuman(seconds)) : _('Submit');
+
+        const stepSeconds = this._step * 60;
+        const showRound = valid && this._rounding > 0 && seconds % stepSeconds !== 0;
+        this._roundChip.visible = showRound;
+        if (showRound) {
+            const rounded = formatHuman(roundToStep(seconds, this._step));
+            this._roundChip.label = _('Round to %dm → %s').format(this._step, rounded);
+            this._roundChip.accessible_name = this._roundChip.label;
+        }
+        for (const chip of [this._minusChip, this._plusChip]) {
+            chip.reactive = valid;
+            chip.can_focus = valid;
+            if (valid)
+                chip.remove_style_pseudo_class('insensitive');
+            else
+                chip.add_style_pseudo_class('insensitive');
+        }
         return valid;
     }
 

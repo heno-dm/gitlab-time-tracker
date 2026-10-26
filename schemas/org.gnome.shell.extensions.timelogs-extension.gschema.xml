@@ -31,10 +31,35 @@
       <summary>Timer behaviour when the screen locks</summary>
       <description>One of pause, keep-counting or resume-on-unlock</description>
     </key>
-    <key name="show-panel-time" type="b">
-      <default>true</default>
-      <summary>Show elapsed time in the top bar</summary>
-      <description>Show the elapsed time of the active session next to the indicator icon</description>
+    <key name="panel-content" type="s">
+      <default>'time'</default>
+      <summary>What the top bar shows next to the icon</summary>
+      <description>One of time (elapsed time), issue-and-time (#iid · time) or icon (nothing)</description>
+    </key>
+    <key name="idle-minutes" type="i">
+      <default>10</default>
+      <summary>Idle reminder threshold</summary>
+      <description>Ask whether to remove idle time after this many minutes away while a session runs; 0 disables</description>
+    </key>
+    <key name="long-timer-hours" type="i">
+      <default>8</default>
+      <summary>Long timer reminder threshold</summary>
+      <description>Remind once per session when it has run this many hours; 0 disables</description>
+    </key>
+    <key name="rounding-minutes" type="i">
+      <default>15</default>
+      <summary>Rounding step in the submit dialog</summary>
+      <description>Step in minutes for the quick-adjust chips; 0 hides the rounding chip</description>
+    </key>
+    <key name="submit-log" type="s">
+      <default>'[]'</default>
+      <summary>Recent successful submits</summary>
+      <description>JSON array of {key, seconds, at} pruned to 31 days; feeds the "Today" total in the menu</description>
+    </key>
+    <key name="last-stale-check" type="s">
+      <default>''</default>
+      <summary>Date of the last stale-session reminder</summary>
+      <description>ISO date (YYYY-MM-DD) so the reminder fires at most once per day</description>
     </key>
     <key name="timer-state" type="s">
       <default>'{}'</default>
@@ -67,9 +92,9 @@
       <description>Either categories or calendar</description>
     </key>
     <key name="report-user" type="s">
-      <default>''</default>
+      <default>'me'</default>
       <summary>Last report user filter</summary>
-      <description>Username filter in the report window; empty means everyone</description>
+      <description>Username filter in the report window; "me" resolves to the signed-in user, empty means everyone</description>
     </key>
     <key name="report-export-format" type="s">
       <default>'csv'</default>
@@ -96,6 +121,11 @@
       <summary>Search issues shortcut</summary>
       <description>Keyboard shortcut to open the menu with the search entry focused</description>
     </key>
+    <key name="open-menu-shortcut" type="as">
+      <default>['&lt;Super&gt;&lt;Alt&gt;m']</default>
+      <summary>Open menu shortcut</summary>
+      <description>Keyboard shortcut to open (or close) the extension menu without clicking the top bar icon</description>
+    </key>
     <key name="monthly-report-shortcut" type="as">
       <default>['&lt;Super&gt;&lt;Alt&gt;r']</default>
       <summary>Monthly report shortcut</summary>
@@ -116,6 +146,11 @@
       <default>false</default>
       <summary>Count elapsed time when locked (legacy)</summary>
       <description>Migrated into lock-behaviour</description>
+    </key>
+    <key name="show-panel-time" type="b">
+      <default>true</default>
+      <summary>Show elapsed time in the top bar (legacy)</summary>
+      <description>Migrated into panel-content</description>
     </key>
   </schema>
 </schemalist>

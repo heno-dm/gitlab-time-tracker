@@ -92,6 +92,7 @@ pot:
 		--msgid-bugs-address="https://github.com/heno-dm/gitlab-time-tracker/issues" \
 		--keyword=_ \
 		--keyword=gettext \
+		--keyword=ngettext:1,2 \
 		--add-comments=TRANSLATORS \
 		$(SOURCES)
 	@echo "✓ Template updated: po/$(UUID).pot"

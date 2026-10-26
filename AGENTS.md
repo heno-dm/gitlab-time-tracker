@@ -4,7 +4,8 @@
 - This is a GNOME Shell extension, not a Node/Python project; there is no package manifest or JS test framework beyond `tests/run.js`.
 - Runtime entrypoint is `extension.js` (wiring only); preferences entrypoint is `prefs.js` via `metadata.json` `settings-schema` and `gettext-domain`.
 - `core/` holds pure logic shared by all processes (`gitlabClient.js`, `config.js`, `sessionStore.js`, `issueSource.js`, `format.js`, `lockPolicy.js`). It may import only `GLib`, `Gio`, `Soup` and `Secret` — never `St`, `Clutter`, `Gtk`, `Adw` or `resource:///org/gnome/shell/...`, so `gjs -m` can load it headlessly.
-- `ui/` holds Shell widgets: `indicator.js` (panel button + menu), `menuSections.js`, `submitDialog.js`, `actions.js` (submit/discard/undo), `notifications.js`.
+- `ui/` holds Shell widgets: `indicator.js` (panel button, state badge, banner + menu), `menuSections.js`, `submitDialog.js` (chips, live button label), `actions.js` (submit/discard/undo, submit log), `notifications.js`, `reminders.js` (idle, long timer, lock restore, stale sessions).
+- `String.prototype.format` exists only inside GNOME Shell. `ui/` and `extension.js` may use it; `prefs.js` and `report/` run in other processes and must use their local `fmt()` helper instead.
 - `report/` is a separate GTK4 + libadwaita process started with `gjs -m report/main.js [projectId]`; `reportData.js` and `exporters.js` are pure and tested.
 
 ## Commands
@@ -24,6 +25,9 @@
 - All GitLab HTTP goes through `core/gitlabClient.js` (`/api/v4`, `PRIVATE-TOKEN`, 15 s timeout, error kinds `auth|not-found|network|http|config|cancelled|graphql`). Do not build URLs elsewhere.
 - Timer state is JSON v3 in the GSettings `timer-state` key (`{version, activeKey, sessions[], lastSeenAt}`); elapsed time is timestamp-based (`accumulatedSeconds + now - runningSince`). v1/v2 states are migrated on load. Changing the shape affects restore after lock/logout/restart (`core/lockPolicy.js`).
 - The token lives in libsecret (schema `org.gnome.shell.extensions.timelogs-extension.Token`, attribute `server=<url>`); the `gitlab-token` GSettings key is only a fallback. Prefs signal a credential change to the Shell by writing `cached-user`.
+- Reminders (`ui/reminders.js`) use `global.backend.get_core_idle_monitor()` for idle detection and `SessionStore.add/subtract` to adjust time; the lock-restore reminder is driven by the return value of `SessionStore.applyLockPolicy()` in `extension.js`.
+- `submit-log` (JSON) feeds the footer's "Today" total; `Actions` appends to it before `completeSubmit` so the re-render sees it. `panel-content` replaced `show-panel-time` (migrated in settings version 4).
+- GTK accessibility: `update_relation(DESCRIBED_BY, …)` cannot be built from GJS; use `update_property(DESCRIPTION, text)` instead. `Gtk.LevelBar` needs its low/high/full offsets removed to render in one colour.
 - `metadata.json` targets GNOME Shell 46-49 and UUID `timelogs-extension@heno-dm.github.io`; package names and schema/gettext domains depend on that UUID. The MessageTray notification API used in `ui/notifications.js` requires 46+.
 
 ## Manual Verification

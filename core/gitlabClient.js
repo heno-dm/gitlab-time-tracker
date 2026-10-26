@@ -206,14 +206,14 @@ export function queueQuery({userId, labels}) {
 }
 
 /** Query string for text or #iid search within one project. */
-export function searchQuery(text) {
+export function searchQuery(text, {includeClosed = false} = {}) {
     const trimmed = String(text ?? '').trim();
     if (/^#?\d+$/.test(trimmed))
         return encodeParams([['iids[]', trimmed.replace(/^#/, '')], ['per_page', 10]]);
     return encodeParams([
         ['search', trimmed],
         ['in', 'title,description'],
-        ['state', 'opened'],
+        ['state', includeClosed ? 'all' : 'opened'],
         ['order_by', 'updated_at'],
         ['sort', 'desc'],
         ['per_page', 10],

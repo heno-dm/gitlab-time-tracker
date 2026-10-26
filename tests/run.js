@@ -3,13 +3,15 @@
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 
-import {formatClock, formatShort, isValidGitLabDuration, toGitLabDuration} from '../core/format.js';
+import {adjustDuration, formatClock, formatHuman, formatReportHours, formatShort, isValidGitLabDuration,
+    parseGitLabDuration, roundToStep, toGitLabDuration} from '../core/format.js';
 import {GitLabClient, GitLabError, encodeParams, normalizeUrl, queueQuery, searchQuery} from '../core/gitlabClient.js';
 import {Config} from '../core/config.js';
 import {SessionStore, migrateState} from '../core/sessionStore.js';
 import {policyFromLegacy, restoreRunning} from '../core/lockPolicy.js';
 import {IssueSource, filterLocal, mergeResults, visibleQueue} from '../core/issueSource.js';
-import {aggregate, authorsOf, entriesFromNodes, monthRange, parseTagFilters} from '../report/reportData.js';
+import {aggregate, authorsOf, calendarWeeks, entriesFromNodes, issuesInCategory, monthRange, parseTagFilters,
+    previousMonth, summarize, workingDays} from '../report/reportData.js';
 import {exportFileName, toCsv, toMarkdown} from '../report/exporters.js';
 
 const tests = [];
@@ -41,8 +43,10 @@ function fakeSettings(values = {}) {
     const defaults = {
         'settings-version': 0, 'gitlab-url': 'https://gitlab.example', 'gitlab-token': 'token',
         'tracked-projects': '[]', 'doing-labels': 'doing', 'lock-behaviour': 'pause', 'show-panel-time': true,
+        'panel-content': 'time', 'idle-minutes': 10, 'long-timer-hours': 8, 'rounding-minutes': 15,
+        'submit-log': '[]', 'last-stale-check': '',
         'timer-state': '{}', 'queue-cache': '{}', 'cached-user': '{}', 'projects-cache': '{}',
-        'report-tags-filter': '', 'report-view': 'categories', 'report-user': '', 'report-export-format': 'csv',
+        'report-tags-filter': '', 'report-view': 'categories', 'report-user': 'me', 'report-export-format': 'csv',
         'default-project': '{}', 'resume-on-unlock': false, 'count-time-when-locked': false,
     };
     const store = {...defaults, ...values};
@@ -143,6 +147,16 @@ test('format: clock, short and GitLab durations', () => {
     assert(!isValidGitLabDuration('') && !isValidGitLabDuration('1.5h') && !isValidGitLabDuration('h'));
 });
 
+test('format: human durations, report hours, parsing and chip arithmetic', () => {
+    equal([formatHuman(5025), formatHuman(3600), formatHuman(2700), formatHuman(0)], ['1h 23m', '1h', '45m', '0m']);
+    equal([formatReportHours(136800), formatReportHours(0)], ['38.0 h', '0.0 h']);
+    equal([parseGitLabDuration('1h 30m'), parseGitLabDuration('45m'), parseGitLabDuration('2d4h'), parseGitLabDuration('1d')],
+        [5400, 2700, 2 * 8 * 3600 + 4 * 3600, 8 * 3600]);
+    equal([parseGitLabDuration('1.5h'), parseGitLabDuration('')], [null, null]);
+    equal([roundToStep(4980, 15), roundToStep(5400, 15), roundToStep(120, 15), roundToStep(0, 15)], [5400, 5400, 900, 900]);
+    equal([adjustDuration(5400, -900), adjustDuration(300, -900), adjustDuration(5400, 900)], [4500, 60, 6300]);
+});
+
 // ---- client ----------------------------------------------------------------
 
 test('client: URL normalisation and query helpers', () => {
@@ -160,6 +174,7 @@ test('client: URL normalisation and query helpers', () => {
     assert(!searchQuery('142').includes('state='), 'iid lookup is any-state');
     const text = searchQuery('fix & test');
     assert(text.includes('search=fix%20%26%20test') && text.includes('in=title%2Cdescription') && text.includes('state=opened'));
+    assert(searchQuery('fix', {includeClosed: true}).includes('state=all'), 'Include closed issues re-runs with state=all');
 });
 
 test('client: headers, pagination and error mapping', async () => {
@@ -439,6 +454,44 @@ test('store: v2 running timer uses savedAt as lastSeenAt and never gains phantom
     }
 });
 
+test('store: add and subtract adjust banked time, clamp at zero and keep running state', () => {
+    const {store, clock, changes} = storeWith();
+    store.start(PROJECT, issue(1));
+    clock.now += 1500; // 25 minutes away with the timer running
+    assert(store.subtract('1#1', 1500), 'idle "Remove 25 min"');
+    let snap = store.snapshot();
+    equal([snap.active.elapsedSeconds, snap.active.running], [0, true]);
+    clock.now += 100;
+    equal(store.snapshot().active.elapsedSeconds, 100, 'keeps counting from the adjusted value');
+    assert(store.subtract('1#1', 5000), 'over-subtracting clamps at zero');
+    equal(store.snapshot().active.elapsedSeconds, 0);
+    store.pause();
+    assert(store.add('1#1', 2400), 'lock "Add 40 min"');
+    snap = store.snapshot();
+    equal([snap.active.elapsedSeconds, snap.active.running], [2400, false]);
+    equal([store.add('1#1', 0), store.add('nope', 10), store.subtract('1#1', -5)], [false, false, false]);
+    equal(changes.length, 5, 'each adjustment emits changed once');
+});
+
+test('store: applyLockPolicy reports the paused session and the time away for the lock reminder', () => {
+    const first = storeWith();
+    first.store.start(PROJECT, issue(2));
+    first.clock.now += 300;
+    first.store.heartbeat();
+    first.clock.now += 2400; // locked for 40 minutes
+    const second = storeWith({'timer-state': first.settings.get_string('timer-state')});
+    second.clock.now = first.clock.now;
+    equal(second.store.applyLockPolicy('pause'), {key: '1#2', policy: 'pause', awaySeconds: 2400});
+    assert(!second.store.snapshot().active.running);
+    second.store.add('1#2', 2400);
+    second.store.resume();
+    equal([second.store.snapshot().active.elapsedSeconds, second.store.snapshot().active.running], [2700, true]);
+    second.store.pause();
+    equal(second.store.applyLockPolicy('pause'), null, 'a paused active session is never touched');
+    const idle = storeWith();
+    equal(idle.store.applyLockPolicy('pause'), null, 'no active session');
+});
+
 test('store: changed signal fires on transitions and heartbeat only saves', () => {
     const {store, changes, saved, clock} = storeWith();
     store.start(PROJECT, issue(1));
@@ -463,7 +516,7 @@ test('config: migration seeds tracked projects and lock behaviour, idempotently'
         assert(config.migrate());
         equal(config.lockBehaviour, expected);
         equal(config.trackedProjects.map(p => p.id), [1]);
-        equal(settings.get_int('settings-version'), 3);
+        equal(settings.get_int('settings-version'), 4);
         config.lockBehaviour = 'keep-counting';
         config.trackedProjects = [OTHER];
         assert(!config.migrate(), 'second run is a no-op');
@@ -476,6 +529,37 @@ test('config: migration seeds tracked projects and lock behaviour, idempotently'
     const broken = new Config(fakeSettings({'default-project': 'garbage', 'tracked-projects': 'garbage'}));
     broken.migrate();
     equal(broken.trackedProjects, []);
+});
+
+test('config: v4 migration maps show-panel-time to panel-content and defaults the report to me', () => {
+    const hidden = new Config(fakeSettings({'show-panel-time': false, 'report-user': ''}));
+    hidden.migrate();
+    equal([hidden.panelContent, hidden.reportUser], ['icon', 'me']);
+    const shown = new Config(fakeSettings({'show-panel-time': true, 'report-user': 'jane'}));
+    shown.migrate();
+    equal([shown.panelContent, shown.reportUser], ['time', 'jane']);
+    const migrated = new Config(fakeSettings({'settings-version': 3, 'show-panel-time': false, 'panel-content': 'issue-and-time'}));
+    migrated.migrate();
+    equal(migrated.panelContent, 'icon', 'v3 → v4 still runs the panel migration');
+    const done = new Config(fakeSettings({'settings-version': 4, 'show-panel-time': false}));
+    assert(!done.migrate());
+    equal(done.panelContent, 'time', 'v4 settings are left alone');
+    const bogus = new Config(fakeSettings({'settings-version': 4, 'panel-content': 'nonsense', 'idle-minutes': -3}));
+    equal([bogus.panelContent, bogus.idleMinutes, bogus.longTimerHours, bogus.roundingMinutes], ['time', 0, 8, 15]);
+});
+
+test('config: submit log is pruned to 31 days and sums today', () => {
+    const config = new Config(fakeSettings());
+    const now = Math.floor(new Date(2026, 9, 23, 15, 0, 0).getTime() / 1000);
+    config.addSubmit({key: '1#1', seconds: 3600, at: now - 40 * 86400});
+    config.addSubmit({key: '1#1', seconds: 600, at: now - 86400});
+    config.addSubmit({key: '1#2', seconds: 5400, at: now - 3600});
+    config.addSubmit({key: '1#3', seconds: 6000, at: now});
+    equal(config.getSubmitLog(now).map(entry => entry.seconds), [600, 5400, 6000], 'old entries pruned');
+    equal(config.submittedTodaySeconds(now), 11400);
+    equal(config.submittedTodaySeconds(now + 86400), 0);
+    const broken = new Config(fakeSettings({'submit-log': 'garbage'}));
+    equal(broken.submittedTodaySeconds(now), 0);
 });
 
 test('config: caches are scoped to the server URL', () => {
@@ -672,6 +756,55 @@ test('report: tag filters, aggregation and authors', () => {
     equal(alice.totalSeconds, 10800);
     equal(authorsOf(ENTRIES), [{username: 'alice', name: 'Alice'}, {username: 'bob', name: 'Bob'}]);
     equal(monthRange(2026, 1), {startDate: '2026-02-01', endDate: '2026-02-28'});
+});
+
+test('report: per-issue drill-down, day entries, summary figures and calendar weeks', () => {
+    const data = aggregate(ENTRIES, {year: 2026, month: 9, tagFilters: parseTagFilters('Bug,^Feature.*$')});
+    equal(issuesInCategory(data, 'Bug').map(({issue, seconds}) => [issue.iid, seconds]), [[1, 3600]]);
+    equal(issuesInCategory(data, 'Other').map(({issue, seconds}) => [issue.iid, seconds]), [[2, 1800]]);
+    equal(issuesInCategory(data, 'Nope'), []);
+    equal(data.entriesByDay.get(3).map(entry => entry.timelog.id), ['gid://1', 'gid://2']);
+    equal(data.entriesByDay.get(3)[0].timelog.summary, null);
+    equal(entriesFromNodes([{id: 'x', summary: 'Wrote docs', issue: {iid: 1, labels: {nodes: []}}}])[0].timelog.summary, 'Wrote docs');
+    equal(data.neutralLabels, ['Other', 'No label']);
+
+    // October 2026: 1st is a Thursday; 22 working days in the month, 17 up to Friday the 23rd.
+    equal(workingDays(2026, 9, new Date(2026, 10, 5)), 22);
+    equal(workingDays(2026, 9, new Date(2026, 9, 23)), 17);
+    equal(workingDays(2026, 9, new Date(2026, 9, 24)), 17, 'Saturday adds nothing');
+    equal(workingDays(2026, 9, new Date(2026, 8, 1)), 0, 'future month');
+    const summary = summarize(data, {year: 2026, month: 9, today: new Date(2026, 9, 23), previousTotalSeconds: 10800});
+    equal([summary.totalSeconds, summary.issueCount, summary.workingDays], [12600, 3, 17]);
+    equal(Math.round(summary.averagePerWorkingDay), Math.round(12600 / 17));
+    equal(summary.changeRatio.toFixed(3), ((12600 - 10800) / 10800).toFixed(3));
+    equal(summarize(data, {year: 2026, month: 9}).changeRatio, null, 'no baseline yet');
+    equal(summarize(data, {year: 2026, month: 9, previousTotalSeconds: 0}).changeRatio, Infinity);
+    equal(previousMonth(2026, 0), {year: 2025, month: 11});
+
+    const weeks = calendarWeeks(2026, 9, data.timeByDay, new Date(2026, 9, 23));
+    equal(weeks.length, 5);
+    equal(weeks[0].days.slice(0, 3), [null, null, null], 'October 2026 starts on a Thursday');
+    equal(weeks[0].days[3].day, 1);
+    equal([weeks[0].totalSeconds, weeks[3].totalSeconds], [5400, 7200]);
+    const day23 = weeks[3].days.find(day => day?.day === 23);
+    const day24 = weeks[3].days.find(day => day?.day === 24);
+    equal([day23.today, day23.future, day23.weekend, day24.weekend, day24.future], [true, false, false, true, true]);
+    equal(weeks[4].days.filter(Boolean).map(day => day.day), [26, 27, 28, 29, 30, 31]);
+    equal(weeks[4].days[6], null, 'trailing blanks');
+});
+
+test('report: fetchTimelogs reports progress with the connection count', async () => {
+    const {client, pending, respond} = fakeClient();
+    const {fetchTimelogs} = await import('../report/reportData.js');
+    const progress = [];
+    const fetching = fetchTimelogs(client, 1, 2026, 9, {onProgress: event => progress.push(event)});
+    await flush();
+    respond(0, {timelogs: {count: 3, nodes: [{id: 'a', issue: {iid: 1, labels: {nodes: []}}}, {id: 'b', issue: null}],
+        pageInfo: {hasNextPage: true, endCursor: 'c1'}}});
+    await flush();
+    respond(1, {timelogs: {nodes: [{id: 'c', issue: {iid: 2, labels: {nodes: []}}}], pageInfo: {hasNextPage: false}}});
+    await fetching;
+    equal(progress, [{loaded: 2, total: 3}, {loaded: 3, total: null}]);
 });
 
 test('report: CSV and Markdown exports are byte-compatible with the previous window', () => {

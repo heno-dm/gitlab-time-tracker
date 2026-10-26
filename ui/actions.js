@@ -3,7 +3,7 @@
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 
-import {formatShort, toGitLabDuration} from '../core/format.js';
+import {formatHuman, formatShort, parseGitLabDuration, toEditableDuration} from '../core/format.js';
 import {SubmitDialog} from './submitDialog.js';
 import {notify, notifyWithActions} from './notifications.js';
 
@@ -26,11 +26,12 @@ export function describeError(error, _) {
 
 export class Actions {
     /**
-     * @param {{store, client, gettext, openPrefs}} params
+     * @param {{store, client, config, gettext, openPrefs}} params
      */
-    constructor({store, client, gettext, openPrefs}) {
+    constructor({store, client, config, gettext, openPrefs}) {
         this._store = store;
         this._client = client;
+        this._config = config;
         this._ = gettext;
         this._openPrefs = openPrefs;
         this._dialog = null;
@@ -49,8 +50,9 @@ export class Actions {
             gettext: _,
             project: session.project,
             issue: session.issue,
-            duration: duration ?? toGitLabDuration(session.elapsedSeconds),
+            duration: duration ?? toEditableDuration(session.elapsedSeconds),
             comment,
+            roundingMinutes: this._config.roundingMinutes,
             onSubmit: (editedDuration, editedComment) => this._send(key, editedDuration, editedComment),
         });
         this._dialog.connect('closed', () => {
@@ -68,14 +70,17 @@ export class Actions {
         if (!submission)
             return;
         const {project, issue} = submission;
+        const seconds = parseGitLabDuration(duration) ?? submission.elapsedSeconds;
         this._client.post(`/projects/${project.id}/issues/${issue.iid}/add_spent_time`, {
             duration,
             summary: comment || undefined,
         }).then(() => {
             if (this._destroyed)
                 return;
+            // Log first: completeSubmit emits `changed`, which re-renders the "Today" total.
+            this._config.addSubmit({key, seconds, at: Math.floor(Date.now() / 1000)});
             this._store.completeSubmit(key, true);
-            notify(_('Time sent'), _('Sent %s to #%s').format(duration, issue.iid));
+            notify(_('Submitted'), _('Submitted %s to #%s').format(formatHuman(seconds), issue.iid));
         }).catch(error => {
             if (this._destroyed)
                 return;
@@ -83,8 +88,8 @@ export class Actions {
             const actions = [{label: _('Retry'), callback: () => this.submit(key, {duration, comment})}];
             if (error?.kind === 'auth' || error?.kind === 'config')
                 actions.push({label: _('Open Settings'), callback: () => this._openPrefs()});
-            notifyWithActions(_('Time not sent'),
-                _("Couldn't send time to #%s: %s").format(issue.iid, describeError(error, _)), actions);
+            notifyWithActions(_('Time not submitted'),
+                _("Couldn't submit time to #%s: %s").format(issue.iid, describeError(error, _)), actions);
         });
     }
 
@@ -129,8 +134,12 @@ export class Actions {
             notify(this._('Timelogs'), this._('Issue URL not available'));
             return;
         }
+        this.openUrl(issue.web_url);
+    }
+
+    openUrl(url) {
         try {
-            Gio.AppInfo.launch_default_for_uri(issue.web_url, null);
+            Gio.AppInfo.launch_default_for_uri(url, null);
         } catch (e) {
             notify(this._('Timelogs'), `${this._('Unable to open browser')}: ${e.message}`);
         }

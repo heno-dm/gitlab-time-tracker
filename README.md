@@ -12,15 +12,16 @@ For the maintained project, releases, support, and contributions, use the [upstr
 
 ## Features
 
-- Timer icon and elapsed time in the GNOME top bar
+- Timer icon and elapsed time (or issue and time) in the GNOME top bar, with a warning dot when GitLab is unreachable or not set up
 - One menu for everything: search, start, switch, pause, submit and discard
 - Independent timers per issue; switching pauses the previous one and keeps its time
 - Your Doing queue across all tracked projects, in board order, cached so the menu never jumps
 - Search issues by text or `#number` across tracked projects without leaving the menu
-- Submit time with an editable duration and comment; the timer keeps running until you send
+- Submit time with an editable duration, rounding and ±step chips, and a comment; the timer keeps running until you submit
 - Discard with one click and Undo from the notification
-- Configurable keyboard shortcuts
-- Monthly reports per project with category and calendar views, and CSV or Markdown export
+- Reminders for idle time, long timers, sessions paused by the lock screen, and stale paused sessions
+- Keyboard shortcuts recorded by pressing them
+- Monthly reports per project with a summary card, category drill-down, calendar day details, CSV or Markdown export and clipboard copy
 - Access token stored in the system keyring (libsecret) when available
 - English, French, Spanish, and German translations
 
@@ -52,33 +53,44 @@ The maintained upstream release is also available from [extensions.gnome.org](ht
 
 1. Open the extension menu from the timer icon in the top bar and choose **Set up GitLab…** (or **Settings**).
 2. Enter the URL of your GitLab instance, including the protocol, and press the apply button.
-3. Use **Create access token…** to open GitLab with the token name and `api` scope prefilled, then paste the token and apply it. The **Connection** row shows who you are connected as, or the error.
+3. Use **Create token…** to open GitLab with the token name and `api` scope prefilled, then paste the token and apply it. The page switches to the connected layout once GitLab accepts it, or explains the error under the token field.
 4. Open **Tracked projects** and switch on the projects whose issues you work on. The Doing queue and search cover all of them.
-5. Optionally change the **Doing labels**, the top-bar time display, what happens when the screen locks, and the keyboard shortcuts.
+5. Optionally change the **Doing labels**, what the top bar shows, what happens when the screen locks, the idle and long-timer reminders, the rounding step, and the keyboard shortcuts.
 
 ## Usage
 
-The menu has one search entry at the top, then the active session, paused sessions, your Doing queue, and the footer.
+The top bar shows the timer icon and, while a session exists, its elapsed time (`1:23`). **Top bar shows** in the preferences switches between the time, `#142 · 1:23`, or the icon only. A small warning dot on the icon means GitLab is not set up, rejected the token, or cannot be reached; the menu explains why in a banner with a one-click action.
 
-- **Start an issue**: click it in **Doing**, or type a title fragment or `#142` in the search entry and press Enter. Search results come from all tracked projects; sessions and queue items match instantly, remote matches follow.
-- **Switch**: click a paused session or another issue. The previous session is paused and keeps its time.
-- **Pause / resume**: click the active row or its pause button. The menu stays open so you can see the state change.
-- **Submit**: click the send button on the active or a paused row. The duration is prefilled and selected, the cursor is in the comment field, and Enter sends. The timer keeps running until you submit; cancelling changes nothing.
-- **Discard**: click the trash button. A notification offers **Undo** for 30 seconds.
-- **Open in browser**: the globe button on the active row, or `Ctrl+Enter` on any row.
+The menu has one search entry at the top, then the active session block, paused sessions, your Doing queue, and the footer.
+
+- **Start an issue**: click it in **Doing**, or type a title fragment or `#142` in the search entry and press Enter. Search results come from all tracked projects; sessions and queue items match instantly, remote matches follow. When nothing matches, the menu offers **Include closed issues** and **Search on GitLab**.
+- **Switch**: click a paused session or another issue. The previous session is paused and keeps its time; the **Paused** heading shows the unsubmitted sum.
+- **Pause / resume**: the labelled button in the active block, or `Space` while the block is focused. The menu stays open so you can see the state change.
+- **Submit**: **Submit…** in the active block or the send button on a paused row. The duration is prefilled and selected, the cursor is in the comment field, and the button shows the amount (`Submit 1h 23m`). Chips round the duration to the configured step or adjust it in steps; the timer keeps running until you submit, and cancelling changes nothing.
+- **Discard**: the trash button. A notification offers **Undo** for 30 seconds.
+- **Open in browser**: the globe button in the active block, or `Ctrl+Enter` on any row.
+- **Report** in the footer shows what you submitted today; **Settings** opens the preferences.
 - `Esc` clears the search text; a second `Esc` closes the menu.
 
 Only one issue runs at a time. Elapsed time is timestamp-based, so suspend and resume never lose or inflate time. A failed submission keeps the session untouched and offers **Retry** in the notification.
 
-When the extension is disabled by the lock screen, a logout or a crash, the running session is restored according to **When the screen locks**: pause it, keep counting the downtime, or pause it and resume on unlock. Paused sessions are never altered.
+When the extension is disabled by the lock screen, a logout or a crash, the running session is restored according to **When the screen locks**: pause it and tell you (with **Resume** and **Add N min** in the notification), keep counting the downtime, or pause it and resume on unlock. Paused sessions are never altered.
+
+### Reminders
+
+All reminders are regular notifications with actions; none interrupt you.
+
+- **Idle time**: after you were away for the configured number of minutes while a session ran, choose **Remove N min** or **Keep**.
+- **Long timer**: once per session when it has run for the configured number of hours, with **Submit…**, **Pause** and **Keep**.
+- **Stale sessions**: once per day, paused sessions from earlier days are summed up with a **Review** action that opens the menu.
 
 ### Your Doing queue
 
-The queue shows open issues assigned to you with the configured **Doing labels** (default: `doing`) in every tracked project, in GitLab's manual board order. For scoped labels enter the full name, for example `workflow::Doing`; leave the labels empty to show all your open issues. The last known queue is cached, rendered immediately when the menu opens and refreshed in place. When offline, the cached queue stays visible with a status line.
+The queue shows open issues assigned to you with the configured **Doing labels** (default: `doing`) in every tracked project, in GitLab's manual board order. For scoped labels enter the full name, for example `workflow::Doing`; leave the labels empty to show all your open issues. The last known queue is cached, rendered immediately when the menu opens and refreshed in place. When offline, the cached queue stays visible and its heading shows when it was fetched.
 
 GitLab remains the place for reading user stories, commenting, and moving work across the board. The extension never changes issue labels or board state.
 
-GitLab accepts submitted durations in forms such as `30m`, `2h`, or `2h30m`. The minimum submitted duration is one minute.
+GitLab accepts submitted durations in forms such as `30m`, `2h`, or `2h 30m`. The minimum submitted duration is one minute.
 
 ### Default Shortcuts
 
@@ -86,13 +98,20 @@ GitLab accepts submitted durations in forms such as `30m`, `2h`, or `2h30m`. The
 - `<Super><Alt>s`: submit the active session
 - `<Super><Alt>c`: discard the active session (with Undo)
 - `<Super><Alt>i`: open the menu with the search focused
+- `<Super><Alt>m`: open the menu (or close it when it is open) without clicking the top bar icon
 - `<Super><Alt>r`: open the monthly report
 
-Shortcuts can be changed or disabled in the preferences.
+Shortcuts are recorded in the preferences: activate a row, press the new chord, `Backspace` disables it, `Esc` cancels. Conflicts with the other shortcuts are rejected.
+
+## Preferences
+
+Until GitLab is connected, the preferences show three numbered steps: server, access token (with a **Create token…** link that opens GitLab with the name and scope prefilled), and tracked projects. Once connected, the account row leads to the connection details and **Sign out**, and the **Timer** group holds dropdown-only options: top bar content, lock behaviour, idle reminder, long-timer reminder, and the rounding step for the submit dialog.
 
 ## Reports
 
-The monthly report opens in its own window. Pick a project (searchable), a month (`Alt+Left` / `Alt+Right` or the header buttons), and optionally a user from the people who logged time that month. The **Categories** view lists time per label with a user × category table; the **Calendar** view shows the same month as a grid. **Export** writes CSV (default) or Markdown to your Downloads folder and offers to open the file.
+The monthly report opens in its own window. Pick a project (searchable), a month (`Alt+Left` / `Alt+Right` or the header buttons), and a user: **Me** (default), **Everyone**, or one of the people who logged time that month. The summary card shows the total, the number of issues, the average per working day, and the change against the previous month.
+
+The **Categories** view lists time per label; expand a category to see its issues with their hours and a link to GitLab. With **Everyone** selected, the user × category table appears below it. The **Calendar** view shows the month as a grid with weekly totals; click a day to see its entries, including the comment of each timelog. **Export** writes CSV (default) or Markdown to your Downloads folder and offers to open the file; the menu also copies the report to the clipboard. `Ctrl+1` / `Ctrl+2` switch views, `Ctrl+E` exports, `Ctrl+Shift+C` copies Markdown, `Ctrl+R` or `F5` reloads.
 
 The **Categories** filter accepts exact label names or regular expressions, comma-separated:
 
@@ -111,7 +130,7 @@ This is a GNOME Shell extension written in JavaScript and loaded directly by GNO
 - `extension.js`: wiring only — settings, session store, panel indicator, keybindings, report launcher
 - `prefs.js`: libadwaita preferences
 - `core/`: pure logic shared by all processes (GitLab client, config and migrations, session store, lock policy, issue source, formatting)
-- `ui/`: Shell widgets (panel indicator and menu sections, submit dialog, notifications, actions)
+- `ui/`: Shell widgets (panel indicator and menu sections, submit dialog, notifications, actions, reminders)
 - `report/`: standalone GTK4 + libadwaita report process; `reportData.js` and `exporters.js` are pure
 - `tests/run.js`: headless checks run with `gjs -m`
 - `schemas/`: GSettings schema

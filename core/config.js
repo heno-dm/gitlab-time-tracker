@@ -5,8 +5,20 @@ import {policyFromLegacy, LOCK_POLICIES} from './lockPolicy.js';
 import {serializeProject} from './gitlabClient.js';
 
 export const SCHEMA_ID = 'org.gnome.shell.extensions.timelogs-extension';
-export const SETTINGS_VERSION = 3;
+export const SETTINGS_VERSION = 4;
 const SECRET_SCHEMA_NAME = 'org.gnome.shell.extensions.timelogs-extension.Token';
+
+export const PANEL_CONTENTS = ['time', 'issue-and-time', 'icon'];
+export const IDLE_MINUTE_OPTIONS = [0, 5, 10, 15, 30];
+export const LONG_TIMER_HOUR_OPTIONS = [0, 4, 6, 8, 10];
+export const ROUNDING_MINUTE_OPTIONS = [0, 5, 6, 10, 15, 30];
+const SUBMIT_LOG_DAYS = 31;
+
+/** Local calendar date "YYYY-MM-DD" of an epoch-seconds timestamp. */
+export function localDate(epochSeconds) {
+    const date = new Date(epochSeconds * 1000);
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
 
 function parseJson(text, fallback) {
     try {
@@ -94,12 +106,68 @@ export class Config {
         this._settings.set_string('lock-behaviour', LOCK_POLICIES.includes(value) ? value : 'pause');
     }
 
-    get showPanelTime() {
-        return this._settings.get_boolean('show-panel-time');
+    get panelContent() {
+        const value = this._settings.get_string('panel-content');
+        return PANEL_CONTENTS.includes(value) ? value : 'time';
     }
 
-    set showPanelTime(value) {
-        this._settings.set_boolean('show-panel-time', Boolean(value));
+    set panelContent(value) {
+        this._settings.set_string('panel-content', PANEL_CONTENTS.includes(value) ? value : 'time');
+    }
+
+    get idleMinutes() {
+        return Math.max(0, this._settings.get_int('idle-minutes'));
+    }
+
+    set idleMinutes(value) {
+        this._settings.set_int('idle-minutes', Math.max(0, Math.floor(Number(value) || 0)));
+    }
+
+    get longTimerHours() {
+        return Math.max(0, this._settings.get_int('long-timer-hours'));
+    }
+
+    set longTimerHours(value) {
+        this._settings.set_int('long-timer-hours', Math.max(0, Math.floor(Number(value) || 0)));
+    }
+
+    get roundingMinutes() {
+        return Math.max(0, this._settings.get_int('rounding-minutes'));
+    }
+
+    set roundingMinutes(value) {
+        this._settings.set_int('rounding-minutes', Math.max(0, Math.floor(Number(value) || 0)));
+    }
+
+    get lastStaleCheck() {
+        return this._settings.get_string('last-stale-check');
+    }
+
+    set lastStaleCheck(value) {
+        this._settings.set_string('last-stale-check', String(value ?? ''));
+    }
+
+    // ---- submit log (feeds the "Today" total) ------------------------------
+
+    /** @returns {{key: string, seconds: number, at: number}[]} newest last, pruned to 31 days */
+    getSubmitLog(now = Math.floor(Date.now() / 1000)) {
+        const list = parseJson(this._settings.get_string('submit-log'), []);
+        const cutoff = now - SUBMIT_LOG_DAYS * 86400;
+        return (Array.isArray(list) ? list : []).filter(entry =>
+            entry && typeof entry.key === 'string' && Number.isFinite(entry.seconds) && Number.isFinite(entry.at) && entry.at >= cutoff);
+    }
+
+    addSubmit({key, seconds, at = Math.floor(Date.now() / 1000)}) {
+        const log = this.getSubmitLog(at);
+        log.push({key, seconds: Math.max(0, Math.floor(seconds)), at});
+        this._settings.set_string('submit-log', JSON.stringify(log));
+    }
+
+    /** Seconds submitted successfully on the local calendar day of `now`. */
+    submittedTodaySeconds(now = Math.floor(Date.now() / 1000)) {
+        const today = localDate(now);
+        return this.getSubmitLog(now).filter(entry => localDate(entry.at) === today)
+            .reduce((sum, entry) => sum + entry.seconds, 0);
     }
 
     get timerState() {
@@ -126,6 +194,7 @@ export class Config {
         this._settings.set_string('report-view', value);
     }
 
+    /** '' = everyone, 'me' = the signed-in user, otherwise a username. */
     get reportUser() {
         return this._settings.get_string('report-user');
     }
@@ -296,6 +365,14 @@ export class Config {
                 resumeOnUnlock: this._settings.get_boolean('resume-on-unlock'),
                 countTimeWhenLocked: this._settings.get_boolean('count-time-when-locked'),
             });
+        }
+
+        if (version < 4) {
+            // show-panel-time=false → icon only; the report now defaults to the signed-in user.
+            if (!this._settings.get_boolean('show-panel-time'))
+                this.panelContent = 'icon';
+            if (this._settings.get_string('report-user') === '')
+                this.reportUser = 'me';
         }
 
         this._settings.set_int('settings-version', SETTINGS_VERSION);

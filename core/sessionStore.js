@@ -165,15 +165,53 @@ export class SessionStore {
         return this._state.lastSeenAt;
     }
 
-    /** Called once after restore; adjusts a session that was running when we were last seen. */
+    /**
+     * Called once after restore; adjusts a session that was running when we were last seen.
+     * @returns {{key: string, policy: string, awaySeconds: number}|null} what happened, for the lock reminder
+     */
     applyLockPolicy(policy) {
         const now = this._clock();
         const active = this._active();
         if (!active || active.runningSince === null)
-            return;
+            return null;
+        const stoppedAt = Number.isFinite(this._state.lastSeenAt) ? this._state.lastSeenAt : active.runningSince;
+        const awaySeconds = Math.max(0, now - stoppedAt);
         const restored = restoreRunning(active, {policy, lastSeenAt: this._state.lastSeenAt, now});
         Object.assign(active, restored, {updatedAt: now});
         this._commit();
+        return {key: active.key, policy, awaySeconds};
+    }
+
+    /** Adds banked time to a session (e.g. "Add 40 min" after a lock). */
+    add(key, seconds) {
+        const session = this._find(key);
+        const amount = Math.floor(Number(seconds) || 0);
+        if (!session || amount <= 0)
+            return false;
+        session.accumulatedSeconds += amount;
+        session.updatedAt = this._clock();
+        this._commit();
+        return true;
+    }
+
+    /** Removes time from a session, clamping the total at zero (e.g. idle time). */
+    subtract(key, seconds) {
+        const session = this._find(key);
+        const amount = Math.floor(Number(seconds) || 0);
+        if (!session || amount <= 0)
+            return false;
+        const now = this._clock();
+        const elapsed = this.elapsedOf(session);
+        const remaining = Math.max(0, elapsed - amount);
+        if (session.runningSince !== null) {
+            session.accumulatedSeconds = remaining;
+            session.runningSince = now;
+        } else {
+            session.accumulatedSeconds = remaining;
+        }
+        session.updatedAt = now;
+        this._commit();
+        return true;
     }
 
     // ---- queries -----------------------------------------------------------

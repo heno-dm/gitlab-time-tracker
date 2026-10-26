@@ -127,14 +127,21 @@ export class IssueSource {
                 items.push({project, issue: serializeIssue(issue), source: 'queue'});
         });
         this._queue = items;
-        this._config.queueCache = {user_id: user.id, items: items.map(({project, issue}) => ({project, issue}))};
+        this._config.queueCache = {user_id: user.id, at: Math.floor(Date.now() / 1000),
+            items: items.map(({project, issue}) => ({project, issue}))};
         return items;
+    }
+
+    /** Epoch seconds of the last successful queue refresh (persisted), or null. */
+    get queueCachedAt() {
+        const at = this._config.queueCache?.at;
+        return Number.isFinite(at) ? at : null;
     }
 
     // ---- search ------------------------------------------------------------
 
     /** Remote matches across tracked projects; resolves `null` when superseded. */
-    async search(text) {
+    async search(text, {includeClosed = false} = {}) {
         const serial = ++this._searchSerial;
         this._searchCancellable?.cancel();
         const cancellable = new Gio.Cancellable();
@@ -144,7 +151,7 @@ export class IssueSource {
         if (!trimmed || projects.length === 0)
             return [];
 
-        const query = searchQuery(trimmed);
+        const query = searchQuery(trimmed, {includeClosed});
         const results = await Promise.allSettled(projects.map(project =>
             this._client.get(`/projects/${project.id}/issues?${query}`, {cancellable})));
         if (serial !== this._searchSerial)

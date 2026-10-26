@@ -1,5 +1,5 @@
-// Entry point: wires core state, the panel indicator, keybindings and the
-// report launcher. All logic lives in core/ and ui/.
+// Entry point: wires core state, the panel indicator, reminders, keybindings
+// and the report launcher. All logic lives in core/ and ui/.
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import Meta from 'gi://Meta';
@@ -15,12 +15,14 @@ import {SessionStore} from './core/sessionStore.js';
 import {Actions} from './ui/actions.js';
 import {Indicator} from './ui/indicator.js';
 import {configureSource, notify} from './ui/notifications.js';
+import {Reminders} from './ui/reminders.js';
 
 const HEARTBEAT_SECONDS = 60;
 
 export default class TimelogsExtension extends Extension {
     enable() {
         const _ = this.gettext.bind(this);
+        const ngettext = this.ngettext.bind(this);
         this._settings = this.getSettings();
         this._config = new Config(this._settings);
         this._config.migrate();
@@ -32,11 +34,12 @@ export default class TimelogsExtension extends Extension {
                 this._config.timerState = json;
             },
         });
-        this._store.applyLockPolicy(this._config.lockBehaviour);
+        const restored = this._store.applyLockPolicy(this._config.lockBehaviour);
         this._issues = new IssueSource({client: this._client, config: this._config});
         this._actions = new Actions({
             store: this._store,
             client: this._client,
+            config: this._config,
             gettext: _,
             openPrefs: () => this.openPreferences(),
         });
@@ -51,17 +54,30 @@ export default class TimelogsExtension extends Extension {
             config: this._config,
             actions: this._actions,
             gettext: _,
+            ngettext,
             iconPath: `${this.path}/icons`,
             openPrefs: () => this.openPreferences(),
             openReport: () => this._openReport(),
         });
         Main.panel.addToStatusArea(this.uuid, this._indicator);
 
+        this._reminders = new Reminders({
+            store: this._store,
+            config: this._config,
+            actions: this._actions,
+            gettext: _,
+            ngettext,
+            openMenu: () => this._indicator?.openMenu(),
+        });
+        this._reminders.lockRestored(restored);
+        this._reminders.checkStale();
+
         this._keybindings = [
             ['toggle-timer-shortcut', () => this._indicator?.toggleFromShortcut()],
             ['stop-send-shortcut', () => this._submitActive()],
             ['cancel-timer-shortcut', () => this._discardActive()],
             ['select-issue-shortcut', () => this._indicator?.openWithSearch()],
+            ['open-menu-shortcut', () => this._indicator?.toggleMenuFromShortcut()],
             ['monthly-report-shortcut', () => this._openReport()],
         ];
         for (const [name, callback] of this._keybindings)
@@ -76,7 +92,9 @@ export default class TimelogsExtension extends Extension {
         this._settingsIds = this._config.connectChanged(
             ['gitlab-url', 'gitlab-token', 'cached-user'], () => this._reloadCredentials());
         this._settingsIds.push(...this._config.connectChanged(
-            ['tracked-projects', 'doing-labels', 'show-panel-time'], () => this._indicator?.credentialsChanged()));
+            ['tracked-projects', 'doing-labels', 'panel-content'], () => this._indicator?.credentialsChanged()));
+        this._settingsIds.push(...this._config.connectChanged(
+            ['idle-minutes', 'long-timer-hours'], () => this._reminders?.settingsChanged()));
         this._reloadCredentials();
     }
 
@@ -130,6 +148,8 @@ export default class TimelogsExtension extends Extension {
         // Record the moment tracking stopped so the lock policy can restore correctly.
         this._store?.heartbeat();
         Gio.Settings.sync();
+        this._reminders?.destroy();
+        this._reminders = null;
         this._indicator?.destroy();
         this._indicator = null;
         this._actions?.destroy();
