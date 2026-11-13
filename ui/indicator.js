@@ -159,15 +159,14 @@ class Indicator extends PanelMenu.Button {
     // ---- public API used by keybindings and reminders ----------------------
 
     openWithSearch() {
-        if (!this.menu.isOpen)
-            this.menu.open(true);
+        this.openMenu();
         this._focusSearch();
     }
 
     /** Opens the menu without stealing focus into the search (stale-session "Review"). */
     openMenu() {
         if (!this.menu.isOpen)
-            this.menu.open(true);
+            this.menu.toggle();
     }
 
     /** Open-menu shortcut: opens the menu with the search focused, or closes it when already open. */

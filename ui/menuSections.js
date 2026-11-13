@@ -6,6 +6,7 @@ import Pango from 'gi://Pango';
 import St from 'gi://St';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
+import {VERTICAL} from './compat.js';
 import {formatClock, formatHuman, formatShort} from '../core/format.js';
 import {sessionKey} from '../core/sessionStore.js';
 
@@ -183,7 +184,7 @@ export const IssueRow = GObject.registerClass({
             style_class: 'popup-menu-icon', visible: leadingIcon !== null, y_align: Clutter.ActorAlign.CENTER});
         this.add_child(this._leading);
 
-        const text = new St.BoxLayout({vertical: true, x_expand: true, y_align: Clutter.ActorAlign.CENTER});
+        const text = new St.BoxLayout({...VERTICAL, x_expand: true, y_align: Clutter.ActorAlign.CENTER});
         this._title = ellipsized(new St.Label({text: `#${issue.iid} ${issue.title}`, x_expand: true}));
         text.add_child(this._title);
         this._subtitle = ellipsized(new St.Label({
@@ -314,7 +315,7 @@ export class ActiveSection extends PopupMenu.PopupMenuSection {
 
         this._block = new PopupMenu.PopupBaseMenuItem({activate: false, hover: false, can_focus: true,
             style_class: 'timelogs-active-block'});
-        const column = new St.BoxLayout({vertical: true, x_expand: true, style_class: 'timelogs-active-column'});
+        const column = new St.BoxLayout({...VERTICAL, x_expand: true, style_class: 'timelogs-active-column'});
         this._block.add_child(column);
 
         const titleRow = new St.BoxLayout({x_expand: true});
@@ -512,7 +513,7 @@ export class ResultsSection extends PopupMenu.PopupMenuSection {
 
         // "No results" state: centred two-line message, then two action rows.
         this._empty = new PopupMenu.PopupBaseMenuItem({reactive: false, can_focus: false, activate: false, hover: false});
-        const emptyBox = new St.BoxLayout({vertical: true, x_expand: true, x_align: Clutter.ActorAlign.CENTER,
+        const emptyBox = new St.BoxLayout({...VERTICAL, x_expand: true, x_align: Clutter.ActorAlign.CENTER,
             style_class: 'timelogs-empty'});
         this._emptyTitle = ellipsized(new St.Label({x_align: Clutter.ActorAlign.CENTER}));
         this._emptyDetail = ellipsized(new St.Label({style_class: 'timelogs-subtitle', x_align: Clutter.ActorAlign.CENTER}));

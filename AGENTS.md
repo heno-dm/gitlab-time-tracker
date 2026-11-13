@@ -28,7 +28,8 @@
 - Reminders (`ui/reminders.js`) use `global.backend.get_core_idle_monitor()` for idle detection and `SessionStore.add/subtract` to adjust time; the lock-restore reminder is driven by the return value of `SessionStore.applyLockPolicy()` in `extension.js`.
 - `submit-log` (JSON) feeds the footer's "Today" total; `Actions` appends to it before `completeSubmit` so the re-render sees it. `panel-content` replaced `show-panel-time` (migrated in settings version 4).
 - GTK accessibility: `update_relation(DESCRIBED_BY, …)` cannot be built from GJS; use `update_property(DESCRIPTION, text)` instead. `Gtk.LevelBar` needs its low/high/full offsets removed to render in one colour.
-- `metadata.json` targets GNOME Shell 46-49 and UUID `timelogs-extension@heno-dm.github.io`; package names and schema/gettext domains depend on that UUID. The MessageTray notification API used in `ui/notifications.js` requires 46+.
+- `ui/compat.js` holds shims for API differences between supported Shell versions: use `...VERTICAL` instead of `vertical: true` on `St.BoxLayout` (GNOME 46-47 only know `vertical`, 51 only knows `orientation`). Call `menu.toggle()`/`menu.close()` without arguments; GNOME 51 changed the `open`/`close` parameter to an object.
+- `metadata.json` targets GNOME Shell 46-51 and UUID `timelogs-extension@heno-dm.github.io`; package names and schema/gettext domains depend on that UUID. The MessageTray notification API used in `ui/notifications.js` requires 46+.
 
 ## Manual Verification
 - For packaging/schema/translation changes, run `make build`.

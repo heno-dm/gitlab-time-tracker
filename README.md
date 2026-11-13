@@ -27,7 +27,7 @@ For the maintained project, releases, support, and contributions, use the [upstr
 
 ## Requirements
 
-- GNOME Shell 46, 47, 48, or 49
+- GNOME Shell 46 to 51
 - A GitLab instance exposing API v4 and GraphQL
 - A GitLab personal access token with the `api` scope
 - `gjs` with GTK 4 and libadwaita 1.4 or newer for the report window

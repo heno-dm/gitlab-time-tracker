@@ -6,6 +6,7 @@ import St from 'gi://St';
 import * as Dialog from 'resource:///org/gnome/shell/ui/dialog.js';
 import * as ModalDialog from 'resource:///org/gnome/shell/ui/modalDialog.js';
 
+import {VERTICAL} from './compat.js';
 import {adjustDuration, formatHuman, parseGitLabDuration, roundToStep, toEditableDuration} from '../core/format.js';
 
 const DEFAULT_STEP_MINUTES = 15;
@@ -30,7 +31,7 @@ class SubmitDialog extends ModalDialog.ModalDialog {
         });
         this.contentLayout.add_child(content);
 
-        const form = new St.BoxLayout({vertical: true, style_class: 'timelogs-submit-form'});
+        const form = new St.BoxLayout({...VERTICAL, style_class: 'timelogs-submit-form'});
         content.add_child(form);
 
         this._durationEntry = new St.Entry({

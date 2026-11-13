@@ -722,7 +722,7 @@ Timer state v2 → v3 mapping:
 - Makefile: update `pot` source list to the new files (`extension.js prefs.js core/*.js ui/*.js report/*.js`); make sure `gnome-extensions pack` includes subdirectories (`--extra-source=core --extra-source=ui --extra-source=report --extra-source=icons`). Replace `test-regressions`/`test-selector-ui` targets with `test`.
 - Strip unused CSS classes from `stylesheet.css` (selector/report dialog classes are dead).
 - Update `README.md` (usage section to match §2), `AGENTS.md` (new layout), translations via `make pot` (new/removed strings).
-- `metadata.json`: keep `shell-version` 46–49; add newer versions only after testing in a nested shell. Bump `version`.
+- `metadata.json`: keep `shell-version` 46–51; add newer versions only after testing in a nested shell or a container (`make test-container`). Bump `version`.
 
 ## 9. Implementation order (each step leaves the extension working)
 
