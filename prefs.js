@@ -525,8 +525,12 @@ export default class TimelogsPreferences extends ExtensionPreferences {
             // Keep the token available under the new server address.
             const token = this._tokenRow?.get_text().trim() || await config.getToken(previousUrl);
             config.url = url;
-            if (token)
+            if (token) {
                 await config.setToken(token, url);
+                // The copy succeeded in the keyring; remove the item left under the old URL.
+                if (previousUrl && !config.tokenStorageWarning)
+                    await config.setToken('', previousUrl);
+            }
             config.trackedProjects = [];
             this._updateProjectsSubtitle(this._projectsRow);
             this._updateProjectsSubtitle(this._projectsStepRow);
