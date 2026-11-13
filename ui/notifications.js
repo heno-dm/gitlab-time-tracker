@@ -12,6 +12,13 @@ export function configureSource({title, gicon}) {
     sourceIcon = gicon ?? sourceIcon;
 }
 
+/** Removes the source (and its notifications) from the tray; call from disable(). */
+export function destroySource() {
+    source?.destroy();
+    source = null;
+    sourceIcon = null;
+}
+
 function getSource() {
     if (!source) {
         source = new MessageTray.Source({

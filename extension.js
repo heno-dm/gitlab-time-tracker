@@ -14,7 +14,7 @@ import {IssueSource} from './core/issueSource.js';
 import {SessionStore} from './core/sessionStore.js';
 import {Actions} from './ui/actions.js';
 import {Indicator} from './ui/indicator.js';
-import {configureSource, notify} from './ui/notifications.js';
+import {configureSource, destroySource, notify} from './ui/notifications.js';
 import {Reminders} from './ui/reminders.js';
 
 const HEARTBEAT_SECONDS = 60;
@@ -152,6 +152,7 @@ export default class TimelogsExtension extends Extension {
         Gio.Settings.sync();
         this._reminders?.destroy();
         this._reminders = null;
+        destroySource();
         this._indicator?.destroy();
         this._indicator = null;
         this._actions?.destroy();
