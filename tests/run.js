@@ -237,6 +237,18 @@ test('client: changing credentials cancels in-flight requests', async () => {
 
 // ---- session store ---------------------------------------------------------
 
+test('client: unchanged credentials keep in-flight requests and report no change', async () => {
+    const {session, sent, answer} = fakeSoup();
+    const client = new GitLabClient({url: 'https://gitlab.example', token: 'tok', session});
+    const request = client.get('/user');
+    await flush();
+    equal(client.setCredentials({url: 'https://gitlab.example/', token: ' tok '}), false);
+    assert(!sent[0].cancellable.is_cancelled(), 'request must not be cancelled');
+    answer(0, {text: '{"id":1}'});
+    equal((await request).id, 1);
+    equal(client.setCredentials({url: 'https://gitlab.example', token: 'other'}), true);
+});
+
 test('store: starting an issue runs it and pauses the previous active session', () => {
     const {store, clock, saved} = storeWith();
     store.start(PROJECT, issue(2));
@@ -560,6 +572,19 @@ test('config: submit log is pruned to 31 days and sums today', () => {
     equal(config.submittedTodaySeconds(now + 86400), 0);
     const broken = new Config(fakeSettings({'submit-log': 'garbage'}));
     equal(broken.submittedTodaySeconds(now), 0);
+});
+
+test('config: rewriting the same cached user does not emit changed::cached-user', () => {
+    const settings = fakeSettings();
+    const config = new Config(settings);
+    let changes = 0;
+    settings.connect('changed::cached-user', () => changes++);
+    config.cachedUser = {id: 5, username: 'jane', name: 'Jane'};
+    config.cachedUser = {id: 5, username: 'jane', name: 'Jane'};
+    equal(changes, 1, 'identical write');
+    config.cachedUser = null;
+    config.cachedUser = null;
+    equal(changes, 2, 'identical clear');
 });
 
 test('config: caches are scoped to the server URL', () => {

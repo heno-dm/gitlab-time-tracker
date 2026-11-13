@@ -74,15 +74,25 @@ export class GitLabClient {
         return Boolean(this._url && this._token);
     }
 
-    /** Aborts in-flight requests; a bad URL leaves the client unconfigured. */
+    /**
+     * Aborts in-flight requests when the credentials differ; a bad URL leaves
+     * the client unconfigured.
+     * @returns {boolean} whether anything changed
+     */
     setCredentials({url, token}) {
-        this.abort();
+        let normalized;
         try {
-            this._url = normalizeUrl(url);
+            normalized = normalizeUrl(url);
         } catch (e) {
-            this._url = '';
+            normalized = '';
         }
-        this._token = String(token ?? '').trim();
+        const trimmed = String(token ?? '').trim();
+        if (normalized === this._url && trimmed === this._token)
+            return false;
+        this.abort();
+        this._url = normalized;
+        this._token = trimmed;
+        return true;
     }
 
     abort() {

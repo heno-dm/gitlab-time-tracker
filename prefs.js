@@ -556,6 +556,7 @@ export default class TimelogsPreferences extends ExtensionPreferences {
     async _reconnect() {
         const token = this._tokenRow?.get_text().trim() || await this._config.getToken();
         this._token = token;
+        this._client.abort();
         this._client.setCredentials({url: this._config.url, token});
         this._issues.invalidate();
         await this._checkConnection({openProjectsIfEmpty: true});

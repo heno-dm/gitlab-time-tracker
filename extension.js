@@ -104,7 +104,8 @@ export default class TimelogsExtension extends Extension {
         this._config.getToken(url).then(token => {
             if (!this._client || generation !== this._credentialsGeneration)
                 return;
-            this._client.setCredentials({url, token});
+            if (!this._client.setCredentials({url, token}))
+                return;
             this._issues.invalidate();
             this._indicator?.credentialsChanged();
         }).catch(e => console.debug(`Timelogs: unable to load token: ${e.message}`));

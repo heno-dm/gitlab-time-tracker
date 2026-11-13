@@ -228,9 +228,13 @@ export class Config {
     }
 
     set cachedUser(user) {
-        this._settings.set_string('cached-user', user ? JSON.stringify({
+        const json = user ? JSON.stringify({
             url: this.url, id: user.id, username: user.username, name: user.name,
-        }) : '{}');
+        }) : '{}';
+        // Writing an unchanged value would still emit changed::cached-user, which
+        // the Shell treats as a credential change (abort, invalidate, refetch).
+        if (this._settings.get_string('cached-user') !== json)
+            this._settings.set_string('cached-user', json);
     }
 
     get queueCache() {
