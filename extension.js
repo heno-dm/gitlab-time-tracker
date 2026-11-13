@@ -81,7 +81,8 @@ export default class TimelogsExtension extends Extension {
             ['monthly-report-shortcut', () => this._openReport()],
         ];
         for (const [name, callback] of this._keybindings)
-            Main.wm.addKeybinding(name, this._settings, Meta.KeyBindingFlags.NONE, Shell.ActionMode.NORMAL, callback);
+            Main.wm.addKeybinding(name, this._settings, Meta.KeyBindingFlags.NONE,
+                Shell.ActionMode.NORMAL | Shell.ActionMode.OVERVIEW | Shell.ActionMode.POPUP, callback);
 
         this._heartbeatId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, HEARTBEAT_SECONDS, () => {
             if (this._store?.hasRunning())
