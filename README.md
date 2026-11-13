@@ -6,7 +6,7 @@ A GNOME Shell extension for tracking time spent on GitLab issues from the top ba
 
 This repository was forked from [`Gecka-Apps/gitlab-time-tracker:main`](https://github.com/Gecka-Apps/gitlab-time-tracker/tree/main).
 
-This fork is for personal use only and will not be maintained. Changes in this personal fork were developed primarily through AI-assisted "vibe programming" as an experiment in exploring the capabilities and limitations of AI-assisted software development. Expect rough edges, limited support, and changes tailored to one person's workflow.
+This fork is used by a developer team and maintained by heno.
 
 For the maintained project, releases, support, and contributions, use the [upstream repository](https://github.com/Gecka-Apps/gitlab-time-tracker).
 
