@@ -3,7 +3,11 @@ UUID = $(NAME)@heno-dm.github.io
 EXTENSION_PATH = $(HOME)/.local/share/gnome-shell/extensions/$(UUID)
 SOURCES = extension.js prefs.js $(wildcard core/*.js) $(wildcard ui/*.js) $(wildcard report/*.js)
 
-.PHONY: build install pot clean remove test test-shell test-prefs help
+.PHONY: build install pot clean remove test test-shell test-prefs test-container help
+
+# `make test-container FEDORA=44` tests against GNOME 50, FEDORA=45 against GNOME 51.
+FEDORA ?= 45
+CONTAINER_RUNTIME ?= $(shell command -v podman || command -v docker)
 
 
 help:
@@ -17,6 +21,7 @@ help:
 	@echo "  clean       - Clean build artifacts"
 	@echo "  remove      - Remove installed extension"
 	@echo "  test-shell  - Test extension in nested GNOME Shell"
+	@echo "  test-container - Run tests, build and a headless-Shell smoke test in a Fedora container (FEDORA=44|45)"
 	@echo "  test-prefs  - Test extension preferences"
 	@echo "  help        - Show this help message"
 
@@ -122,10 +127,19 @@ pot:
 test-shell: install
 	@echo "Starting nested GNOME Shell for testing..."
 	@echo "Press Ctrl+C to exit"
+	@# GNOME 49 replaced --nested with --devkit.
 	env GNOME_SHELL_SLOWDOWN_FACTOR=2 \
 		MUTTER_DEBUG_DUMMY_MODE_SPECS=1500x1000 \
 		MUTTER_DEBUG_DUMMY_MONITOR_SCALES=1 \
-		dbus-run-session -- gnome-shell --nested --wayland
+		dbus-run-session -- gnome-shell \
+		$$(if [ "$$(gnome-shell --version | sed 's/[^0-9]*\([0-9]*\).*/\1/')" -ge 49 ]; then echo --devkit; else echo --nested; fi) --wayland
+
+
+test-container:
+	@test -n "$(CONTAINER_RUNTIME)" || { echo "test-container needs podman or docker in PATH (or CONTAINER_RUNTIME=...)"; exit 1; }
+	@echo "Building test image timelogs-test:f$(FEDORA)..."
+	$(CONTAINER_RUNTIME) build -q --build-arg FEDORA=$(FEDORA) -t timelogs-test:f$(FEDORA) tests/container
+	$(CONTAINER_RUNTIME) run --rm -v "$(CURDIR)":/src:ro,z timelogs-test:f$(FEDORA) bash /src/tests/container/run.sh
 
 
 test-prefs: install

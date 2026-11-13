@@ -161,6 +161,10 @@ make test-shell
 # Install and open the preferences window
 make test-prefs
 
+# Run the checks, the build and a headless GNOME Shell smoke test in a
+# Fedora container (podman or docker); FEDORA=44 is GNOME 50, 45 is GNOME 51
+make test-container FEDORA=45
+
 # Update the gettext template and translation catalogs
 make pot
 

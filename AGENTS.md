@@ -14,6 +14,7 @@
 - `make install` runs `make build`, removes the installed extension, then installs `build/timelogs-extension@heno-dm.github.io.shell-extension.zip`.
 - `make test-shell` installs first, then starts a nested Wayland GNOME Shell for manual testing.
 - `make test-prefs` installs first, then opens preferences with `gnome-extensions prefs timelogs-extension@heno-dm.github.io`.
+- `make test-container FEDORA=44|45` needs podman or docker; it builds `tests/container/Containerfile` (Fedora 44 = GNOME 50, 45 = GNOME 51), then runs `make test`, `make build` and `tests/container/smoke.sh`, which drives the packaged extension inside a headless Shell over `org.gnome.Shell.Eval`. Use it to verify a Shell version that is not installed locally.
 - `make pot` updates `po/timelogs-extension@heno-dm.github.io.pot` from `extension.js prefs.js core/*.js ui/*.js report/*.js`, rewrites `po/LINGUAS`, and merges translations.
 
 ## Generated Files

@@ -1,0 +1,8 @@
+# Test image: Fedora ships a recent GNOME Shell, so `FEDORA=44` gives GNOME 50
+# and `FEDORA=45` gives GNOME 51. Used by `make test-container`.
+ARG FEDORA=45
+FROM registry.fedoraproject.org/fedora:${FEDORA}
+RUN dnf -y install --setopt=install_weak_deps=False \
+        gnome-shell gjs glib2 libsoup3 libsecret make gettext \
+        dbus-daemon procps-ng mesa-dri-drivers mesa-libEGL mesa-libGL unzip \
+    && dnf clean all
