@@ -111,6 +111,8 @@ Until GitLab is connected, the preferences show three numbered steps: server, ac
 
 The monthly report opens in its own window. Pick a project (searchable), a month (`Alt+Left` / `Alt+Right` or the header buttons), and a user: **Me** (default), **Everyone**, or one of the people who logged time that month. The summary card shows the total, the number of issues, the average per working day, and the change against the previous month.
 
+The **Categories** view covers a period of your choice: **All time** (default, the project's whole history — use it to see how much time went into one label overall), **Month**, or a **Custom range** with a start and end date. The **Calendar** view always shows one month.
+
 The **Categories** view lists time per label; expand a category to see its issues with their hours and a link to GitLab. With **Everyone** selected, the user × category table appears below it. The **Calendar** view shows the month as a grid with weekly totals; click a day to see its entries, including the comment of each timelog. **Export** writes CSV (default) or Markdown to your Downloads folder and offers to open the file; the menu also copies the report to the clipboard. `Ctrl+1` / `Ctrl+2` switch views, `Ctrl+E` exports, `Ctrl+Shift+C` copies Markdown, `Ctrl+R` or `F5` reloads.
 
 The **Categories** filter accepts exact label names or regular expressions, comma-separated:

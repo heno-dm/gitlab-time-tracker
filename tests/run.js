@@ -10,9 +10,10 @@ import {Config} from '../core/config.js';
 import {SessionStore, migrateState} from '../core/sessionStore.js';
 import {policyFromLegacy, restoreRunning} from '../core/lockPolicy.js';
 import {IssueSource, filterLocal, mergeResults, visibleQueue} from '../core/issueSource.js';
-import {aggregate, authorsOf, calendarWeeks, entriesFromNodes, issuesInCategory, monthRange, parseTagFilters,
-    previousMonth, summarize, workingDays} from '../report/reportData.js';
-import {exportFileName, toCsv, toMarkdown} from '../report/exporters.js';
+import {aggregate, authorsOf, calendarWeeks, entriesFromNodes, fetchTimelogsInRange, issuesInCategory, monthRange,
+    parseIsoDate, parseTagFilters, previousMonth, summarize, summarizeRange, toIsoDate, workingDays,
+    workingDaysBetween} from '../report/reportData.js';
+import {exportFileName, exportFileNameForPeriod, toCsv, toMarkdown} from '../report/exporters.js';
 
 const tests = [];
 const test = (name, run) => tests.push({name, run});
@@ -46,7 +47,7 @@ function fakeSettings(values = {}) {
         'panel-content': 'time', 'idle-minutes': 10, 'long-timer-hours': 8, 'rounding-minutes': 15,
         'submit-log': '[]', 'last-stale-check': '',
         'timer-state': '{}', 'queue-cache': '{}', 'cached-user': '{}', 'projects-cache': '{}',
-        'report-tags-filter': '', 'report-view': 'categories', 'report-user': 'me', 'report-export-format': 'csv',
+        'report-tags-filter': '', 'report-view': 'categories', 'report-user': 'me', 'report-export-format': 'csv', 'report-period': 'all',
         'default-project': '{}', 'resume-on-unlock': false, 'count-time-when-locked': false,
     };
     const store = {...defaults, ...values};
@@ -867,6 +868,35 @@ test('report: fetchTimelogs paginates with the cursor and skips nodes without is
     equal(pending[1].variables.after, 'c1');
     respond(1, {timelogs: {nodes: [{id: 'b', issue: null}], pageInfo: {hasNextPage: false}}});
     equal((await fetching).map(e => e.timelog.id), ['a']);
+});
+
+test('report: free periods fetch without dates, summarise from the first entry and name their export', async () => {
+    const {client, pending, respond} = fakeClient();
+    const fetching = fetchTimelogsInRange(client, 7);
+    await flush();
+    equal(pending[0].variables, {projectId: 'gid://gitlab/Project/7', startDate: null, endDate: null, after: null});
+    respond(0, {timelogs: {nodes: [], pageInfo: {hasNextPage: false}}});
+    equal(await fetching, []);
+
+    equal(toIsoDate(parseIsoDate('2026-02-09')), '2026-02-09');
+    equal([parseIsoDate('2026-02-30'), parseIsoDate('nope')], [null, null]);
+    equal(workingDaysBetween(new Date(2026, 9, 1), new Date(2026, 9, 31)), 22);
+    equal(workingDaysBetween(new Date(2026, 9, 24), new Date(2026, 9, 25)), 0, 'a weekend');
+
+    // All time: counted from the first entry (Saturday 3 October) to today.
+    const data = aggregate(ENTRIES);
+    equal(toIsoDate(data.firstSpentAt), '2026-10-03');
+    const allTime = summarizeRange(data, {today: new Date(2026, 9, 23)});
+    equal([allTime.totalSeconds, allTime.issueCount, allTime.workingDays, allTime.changeRatio], [12600, 3, 15, null]);
+    // Custom range: its own start, and an end in the future stops at today.
+    const custom = summarizeRange(data, {start: new Date(2026, 9, 1), end: new Date(2026, 11, 31), today: new Date(2026, 9, 23)});
+    equal(custom.workingDays, 17);
+    equal(summarizeRange(data, {start: new Date(2026, 9, 1), end: new Date(2026, 9, 9), today: new Date(2026, 9, 23)}).workingDays, 7);
+    equal(summarizeRange(aggregate([])).workingDays, 0);
+
+    equal(exportFileNameForPeriod('team/project', 'all-time', 'md'), 'gitlab-report-team-project-all-time.md');
+    equal(exportFileNameForPeriod('team/project', '2026-01-01_2026-03-31', 'csv'),
+        'gitlab-report-team-project-2026-01-01_2026-03-31.csv');
 });
 
 // ---- runner ----------------------------------------------------------------

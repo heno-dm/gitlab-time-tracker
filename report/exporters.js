@@ -43,6 +43,11 @@ export function toCsv(reportData, {projectPath, monthLabel}) {
 
 /** gitlab-report-<group-project>-<yyyy>-<mm>.<ext> */
 export function exportFileName(projectPath, year, month, ext) {
-    const safePath = String(projectPath).replace(/[/\\:*?"<>|]/g, '-');
-    return `gitlab-report-${safePath}-${year}-${String(month + 1).padStart(2, '0')}.${ext}`;
+    return exportFileNameForPeriod(projectPath, `${year}-${String(month + 1).padStart(2, '0')}`, ext);
+}
+
+/** gitlab-report-<group-project>-<period>.<ext>, e.g. period "all-time" or "2026-01-01_2026-03-31". */
+export function exportFileNameForPeriod(projectPath, period, ext) {
+    const safe = text => String(text).replace(/[/\\:*?"<>|]/g, '-');
+    return `gitlab-report-${safe(projectPath)}-${safe(period)}.${ext}`;
 }

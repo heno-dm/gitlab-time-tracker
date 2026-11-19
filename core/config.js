@@ -194,6 +194,16 @@ export class Config {
         this._settings.set_string('report-view', value);
     }
 
+    /** Period of the report's Categories view: 'all', 'month' or 'custom'. */
+    get reportPeriod() {
+        const value = this._settings.get_string('report-period');
+        return ['all', 'month', 'custom'].includes(value) ? value : 'all';
+    }
+
+    set reportPeriod(value) {
+        this._settings.set_string('report-period', value);
+    }
+
     /** '' = everyone, 'me' = the signed-in user, otherwise a username. */
     get reportUser() {
         return this._settings.get_string('report-user');

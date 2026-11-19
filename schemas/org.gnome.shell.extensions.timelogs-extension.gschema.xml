@@ -91,6 +91,11 @@
       <summary>Last report view</summary>
       <description>Either categories or calendar</description>
     </key>
+    <key name="report-period" type="s">
+      <default>'all'</default>
+      <summary>Last report period</summary>
+      <description>Period of the report's Categories view: all (whole project history), month or custom</description>
+    </key>
     <key name="report-user" type="s">
       <default>'me'</default>
       <summary>Last report user filter</summary>

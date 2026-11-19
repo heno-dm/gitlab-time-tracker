@@ -1,4 +1,4 @@
-// GraphQL fetch + pure aggregation for the monthly report. The aggregation,
+// GraphQL fetch + pure aggregation for the report. The aggregation,
 // summary and calendar helpers have no GI imports so they can be tested headlessly.
 
 const TIMELOGS_QUERY = `query ReportTimelogs($projectId: ProjectID!, $startDate: Time, $endDate: Time, $after: String) {
@@ -15,6 +15,9 @@ const TIMELOGS_QUERY = `query ReportTimelogs($projectId: ProjectID!, $startDate:
         pageInfo { hasNextPage endCursor }
     }
 }`;
+
+// 100 entries per page; enough for a whole project history.
+const MAX_PAGES = 1000;
 
 export function monthRange(year, month) {
     const prefix = `${year}-${String(month + 1).padStart(2, '0')}`;
@@ -61,12 +64,20 @@ export function entriesFromNodes(nodes) {
  * @param {number} month 0-based
  * @param {{cancellable?: object, onProgress?: ({loaded: number, total: number|null}) => void}} [options]
  */
-export async function fetchTimelogs(client, projectId, year, month, {cancellable = null, onProgress = null} = {}) {
-    const {startDate, endDate} = monthRange(year, month);
+export function fetchTimelogs(client, projectId, year, month, options = {}) {
+    return fetchTimelogsInRange(client, projectId, monthRange(year, month), options);
+}
+
+/**
+ * Like fetchTimelogs() for an arbitrary period. `startDate`/`endDate` are
+ * inclusive 'YYYY-MM-DD' strings; leave both null for the project's whole history.
+ */
+export async function fetchTimelogsInRange(client, projectId, {startDate = null, endDate = null} = {},
+    {cancellable = null, onProgress = null} = {}) {
     const entries = [];
     let loaded = 0;
     let after = null;
-    for (let page = 0; page < 200; page++) {
+    for (let page = 0; page < MAX_PAGES; page++) {
         const data = await client.graphql(TIMELOGS_QUERY, {
             projectId: `gid://gitlab/Project/${projectId}`,
             startDate,
@@ -137,6 +148,7 @@ export function aggregate(entries, {author = '', tagFilters = [], year = null, m
     const entriesByDay = new Map();
     const issues = new Set();
     let totalSeconds = 0;
+    let firstSpentAt = null;
 
     for (const entry of entries ?? []) {
         const user = entry.timelog.user?.username || unknownUser;
@@ -149,6 +161,8 @@ export function aggregate(entries, {author = '', tagFilters = [], year = null, m
         totalSeconds += seconds;
         issues.add(entry.issue.iid);
         const spentAt = entry.timelog.spent_at ? new Date(entry.timelog.spent_at) : null;
+        if (spentAt && !Number.isNaN(spentAt.getTime()) && (firstSpentAt === null || spentAt < firstSpentAt))
+            firstSpentAt = spentAt;
         if (spentAt && (year === null || (spentAt.getFullYear() === year && spentAt.getMonth() === month))) {
             const day = spentAt.getDate();
             timeByDay.set(day, (timeByDay.get(day) || 0) + seconds);
@@ -182,6 +196,7 @@ export function aggregate(entries, {author = '', tagFilters = [], year = null, m
         timeByDay,
         entriesByDay,
         totalSeconds,
+        firstSpentAt,
         issueCount: issues.size,
         categoryCount: Object.keys(timeByLabel).length,
         tagFilters,
@@ -234,6 +249,48 @@ export function summarize(reportData, {year, month, today = new Date(), previous
         averagePerWorkingDay: days > 0 ? reportData.totalSeconds / days : 0,
         previousTotalSeconds,
         changeRatio: change,
+    };
+}
+
+/** 'YYYY-MM-DD' → local midnight Date, or null when the text is not a real date. */
+export function parseIsoDate(text) {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(text ?? ''));
+    if (!match)
+        return null;
+    const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+    return date.getMonth() === Number(match[2]) - 1 && date.getDate() === Number(match[3]) ? date : null;
+}
+
+export function toIsoDate(date) {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+/** Mon–Fri days from `start` to `end`, both inclusive (local dates). */
+export function workingDaysBetween(start, end) {
+    const last = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+    let count = 0;
+    for (let day = new Date(start.getFullYear(), start.getMonth(), start.getDate()); day <= last; day.setDate(day.getDate() + 1)) {
+        if (day.getDay() !== 0 && day.getDay() !== 6)
+            count++;
+    }
+    return count;
+}
+
+/**
+ * Summary figures for a free period. `start` null means "since the first
+ * entry"; `end` null means today. Days after `today` never count.
+ */
+export function summarizeRange(reportData, {start = null, end = null, today = new Date()} = {}) {
+    const from = start ?? reportData.firstSpentAt;
+    const to = end && end < today ? end : today;
+    const days = from ? workingDaysBetween(from, to) : 0;
+    return {
+        totalSeconds: reportData.totalSeconds,
+        issueCount: reportData.issueCount,
+        workingDays: days,
+        averagePerWorkingDay: days > 0 ? reportData.totalSeconds / days : 0,
+        previousTotalSeconds: null,
+        changeRatio: null,
     };
 }
 

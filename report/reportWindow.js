@@ -1,4 +1,4 @@
-// Monthly report window (libadwaita, §2.10 + §2.17). Data logic lives in
+// Report window (libadwaita, §2.10 + §2.17). Data logic lives in
 // reportData.js and exporters.js; this file only renders and reacts.
 import Adw from 'gi://Adw?version=1';
 import Gio from 'gi://Gio';
@@ -9,9 +9,9 @@ import Gtk from 'gi://Gtk?version=4.0';
 import Pango from 'gi://Pango';
 
 import {formatReportHours} from '../core/format.js';
-import {exportFileName, toCsv, toMarkdown} from './exporters.js';
-import {aggregate, authorsOf, calendarWeeks, fetchTimelogs, issuesInCategory, parseTagFilters, previousMonth,
-    summarize} from './reportData.js';
+import {exportFileName, exportFileNameForPeriod, toCsv, toMarkdown} from './exporters.js';
+import {aggregate, authorsOf, calendarWeeks, fetchTimelogs, fetchTimelogsInRange, issuesInCategory, monthRange,
+    parseIsoDate, parseTagFilters, previousMonth, summarize, summarizeRange, toIsoDate} from './reportData.js';
 
 /** printf-style %s/%d substitution; String.prototype.format only exists inside GNOME Shell. */
 function fmt(template, ...args) {
@@ -20,6 +20,8 @@ function fmt(template, ...args) {
 }
 
 const VIEWS = ['categories', 'calendar'];
+// Period of the Categories view, in dropdown order. The Calendar view is always one month.
+const PERIODS = ['all', 'month', 'custom'];
 const FORMATS = {csv: {ext: 'csv'}, md: {ext: 'md'}};
 const USER_ME = 0;
 const USER_EVERYONE = 1;
@@ -115,6 +117,11 @@ class ReportWindow extends Adw.ApplicationWindow {
         const now = new Date();
         this._year = now.getFullYear();
         this._month = now.getMonth();
+        this._period = config.reportPeriod;
+        this._rangeStart = toIsoDate(new Date(now.getFullYear(), 0, 1));
+        this._rangeEnd = toIsoDate(now);
+        this._cache = new Map();
+        this._loadedKey = null;
         this._started = false;
 
         this._buildActions();
@@ -147,7 +154,10 @@ class ReportWindow extends Adw.ApplicationWindow {
         add('export-default', () => this._export(this._config.reportExportFormat), ['<Control>e']);
         add('copy-md', () => this._copy('md'), ['<Control><Shift>c']);
         add('copy-csv', () => this._copy('csv'));
-        add('reload', () => this._loadReport(), ['<Control>r', 'F5']);
+        add('reload', () => {
+            this._cache.clear();
+            this._loadReport();
+        }, ['<Control>r', 'F5']);
         add('view-categories', () => this._stack.set_visible_child_name('categories'), ['<Control>1']);
         add('view-calendar', () => this._stack.set_visible_child_name('calendar'), ['<Control>2']);
         add('show-everyone', () => this._userDropdown.set_selected(USER_EVERYONE));
@@ -235,10 +245,13 @@ class ReportWindow extends Adw.ApplicationWindow {
             const name = this._stack.get_visible_child_name();
             if (VIEWS.includes(name))
                 this._config.reportView = name;
+            this._updatePeriodUi();
+            if (this._project && this._rangeKey() !== this._loadedKey)
+                this._loadReport();
         });
 
         this._pages.set_visible_child_name('loading');
-        this._updateMonthNavigation();
+        this._updatePeriodUi();
     }
 
     _buildExportButton() {
@@ -267,9 +280,34 @@ class ReportWindow extends Adw.ApplicationWindow {
         const _ = this._;
         const toolbar = new Gtk.Box({orientation: Gtk.Orientation.HORIZONTAL, spacing: 8});
 
-        this._monthTitle = new Gtk.Label({label: this._monthLabel(), xalign: 0, hexpand: true});
+        this._monthTitle = new Gtk.Label({xalign: 0, hexpand: true, ellipsize: Pango.EllipsizeMode.END});
         this._monthTitle.add_css_class('title-1');
         toolbar.append(this._monthTitle);
+
+        this._rangeBox = new Gtk.Box({orientation: Gtk.Orientation.HORIZONTAL, valign: Gtk.Align.CENTER});
+        this._rangeBox.add_css_class('linked');
+        this._startButton = this._buildDateButton('_rangeStart', _('From'));
+        this._rangeBox.append(this._startButton);
+        this._endButton = this._buildDateButton('_rangeEnd', _('To'));
+        this._rangeBox.append(this._endButton);
+        toolbar.append(this._rangeBox);
+
+        this._periodDropdown = new Gtk.DropDown({
+            model: Gtk.StringList.new([_('All time'), _('Month'), _('Custom range')]),
+            selected: PERIODS.indexOf(this._period),
+            valign: Gtk.Align.CENTER,
+        });
+        this._periodDropdown.update_property([Gtk.AccessibleProperty.LABEL], [_('Period')]);
+        this._periodDropdown.connect('notify::selected', () => {
+            const period = PERIODS[this._periodDropdown.get_selected()] ?? 'all';
+            if (period === this._period)
+                return;
+            this._period = period;
+            this._config.reportPeriod = period;
+            this._updatePeriodUi();
+            this._loadReport();
+        });
+        toolbar.append(this._periodDropdown);
 
         this._projectModel = new Gtk.StringList();
         this._projectDropdown = new Gtk.DropDown({
@@ -334,6 +372,29 @@ class ReportWindow extends Adw.ApplicationWindow {
         return toolbar;
     }
 
+    /** Button showing one end of the custom range; the date is applied when its calendar popover closes. */
+    _buildDateButton(field, label) {
+        const calendar = new Gtk.Calendar();
+        const popover = new Gtk.Popover({child: calendar});
+        const button = new Gtk.MenuButton({popover, tooltip_text: label});
+        popover.connect('show', () => {
+            const date = parseIsoDate(this[field]);
+            if (date)
+                calendar.select_day(GLib.DateTime.new_local(date.getFullYear(), date.getMonth() + 1, date.getDate(), 0, 0, 0));
+        });
+        popover.connect('closed', () => {
+            const picked = calendar.get_date().format('%Y-%m-%d');
+            if (picked === this[field])
+                return;
+            this[field] = picked;
+            if (this._rangeStart > this._rangeEnd)
+                [this._rangeStart, this._rangeEnd] = [this._rangeEnd, this._rangeStart];
+            this._updatePeriodUi();
+            this._loadReport();
+        });
+        return button;
+    }
+
     _updateCategoryLabel() {
         const _ = this._;
         const filters = this._config.reportTagsFilter.split(',').map(filter => filter.trim()).filter(Boolean);
@@ -345,6 +406,8 @@ class ReportWindow extends Adw.ApplicationWindow {
         const card = new Gtk.Box({orientation: Gtk.Orientation.HORIZONTAL, homogeneous: true});
         card.add_css_class('card');
         this._summaryCells = {};
+        this._summaryCaptions = {};
+        this._summaryBoxes = {};
         const cell = (key, caption) => {
             const box = new Gtk.Box({orientation: Gtk.Orientation.VERTICAL, spacing: 2,
                 margin_top: 12, margin_bottom: 12, margin_start: 12, margin_end: 12});
@@ -357,6 +420,8 @@ class ReportWindow extends Adw.ApplicationWindow {
             box.append(captionLabel);
             value.update_property([Gtk.AccessibleProperty.DESCRIPTION], [caption]);
             this._summaryCells[key] = value;
+            this._summaryCaptions[key] = captionLabel;
+            this._summaryBoxes[key] = box;
             card.append(box);
         };
         cell('total', _('Total this month'));
@@ -405,7 +470,11 @@ class ReportWindow extends Adw.ApplicationWindow {
         if (!this._project)
             return;
         const requestId = ++this._requestId;
-        const {_project: project, _year: year, _month: month} = this;
+        const project = this._project;
+        const range = this._range();
+        const key = this._rangeKey();
+        const monthScope = this._isMonthScope();
+        this._loadedKey = key;
         this._reportData = null;
         this._entries = [];
         this._loaded = false;
@@ -413,26 +482,32 @@ class ReportWindow extends Adw.ApplicationWindow {
         this._selectedDay = null;
         this._exportButton.sensitive = false;
         this._windowTitle.set_subtitle(project.path_with_namespace);
-        this._progressLabel.set_label(_('Loading time entries…'));
-        this._pages.set_visible_child_name('loading');
         this._renderSummary();
         try {
-            const entries = await fetchTimelogs(this._client, project.id, year, month, {
-                onProgress: ({loaded, total}) => {
-                    if (requestId !== this._requestId)
-                        return;
-                    this._progressLabel.set_label(total !== null
-                        ? fmt(_('Loading time entries… %d of about %d'), loaded, total)
-                        : fmt(_('Loading time entries… %d loaded'), loaded));
-                },
-            });
-            if (requestId !== this._requestId)
-                return;
+            // Switching between the views swaps the period; keep what was already fetched.
+            let entries = this._cache.get(key);
+            if (!entries) {
+                this._progressLabel.set_label(_('Loading time entries…'));
+                this._pages.set_visible_child_name('loading');
+                entries = await fetchTimelogsInRange(this._client, project.id, range, {
+                    onProgress: ({loaded, total}) => {
+                        if (requestId !== this._requestId)
+                            return;
+                        this._progressLabel.set_label(total !== null
+                            ? fmt(_('Loading time entries… %d of about %d'), loaded, total)
+                            : fmt(_('Loading time entries… %d loaded'), loaded));
+                    },
+                });
+                this._cache.set(key, entries);
+                if (requestId !== this._requestId)
+                    return;
+            }
             this._entries = entries;
             this._loaded = true;
             this._setAuthors(authorsOf(entries));
             this._process();
-            this._loadPreviousMonth(requestId);
+            if (monthScope)
+                this._loadPreviousMonth(requestId);
         } catch (error) {
             if (requestId !== this._requestId)
                 return;
@@ -552,13 +627,17 @@ class ReportWindow extends Adw.ApplicationWindow {
 
     _renderEmpty() {
         const _ = this._;
-        this._emptyPage.set_title(fmt(_('No time tracked in %s'), this._monthLabel()));
+        const monthScope = this._isMonthScope();
+        this._emptyPage.set_title(!monthScope && this._period === 'all'
+            ? _('No time tracked')
+            : fmt(_('No time tracked in %s'), this._periodLabel()));
         const filters = this._config.reportTagsFilter.trim();
         const everyone = this._selectedAuthor() === '';
         const who = everyone ? _('Showing everyone') : fmt(_('Showing %s'), this._selectedUserLabel());
         const what = filters ? fmt(_('categories %s'), filters) : _('all categories');
         this._emptyPage.set_description(`${who} · ${what}`);
         this._showEveryoneButton.visible = !everyone;
+        this._previousMonthButton.visible = monthScope;
         const previous = previousMonth(this._year, this._month);
         this._previousMonthButton.set_label(fmt(_('Go to %s'), 
             GLib.DateTime.new_local(previous.year, previous.month + 1, 1, 0, 0, 0).format('%B %Y')));
@@ -570,6 +649,17 @@ class ReportWindow extends Adw.ApplicationWindow {
         if (!this._reportData) {
             for (const label of Object.values(cells))
                 label.set_label('—');
+            return;
+        }
+        if (!this._isMonthScope()) {
+            const custom = this._period === 'custom';
+            const summary = summarizeRange(this._reportData, {
+                start: custom ? parseIsoDate(this._rangeStart) : null,
+                end: custom ? parseIsoDate(this._rangeEnd) : null,
+            });
+            cells.total.set_label(formatReportHours(summary.totalSeconds));
+            cells.issues.set_label(String(summary.issueCount));
+            cells.average.set_label(summary.workingDays > 0 ? formatReportHours(summary.averagePerWorkingDay) : '—');
             return;
         }
         const previousTotal = this._previousEntries
@@ -866,7 +956,60 @@ class ReportWindow extends Adw.ApplicationWindow {
             propagate_natural_height: true, max_content_height: 520}));
     }
 
-    // ---- month navigation --------------------------------------------------
+    // ---- period and month navigation ---------------------------------------
+
+    /** The Calendar view is always one month; the Categories view follows the period selector. */
+    _isMonthScope() {
+        return this._period === 'month' || this._stack.get_visible_child_name() === 'calendar';
+    }
+
+    /** {startDate, endDate} for the query; both null means the whole project history. */
+    _range() {
+        if (this._isMonthScope())
+            return monthRange(this._year, this._month);
+        if (this._period === 'custom')
+            return {startDate: this._rangeStart, endDate: this._rangeEnd};
+        return {startDate: null, endDate: null};
+    }
+
+    _rangeKey() {
+        const {startDate, endDate} = this._range();
+        return `${this._project?.id}|${startDate}|${endDate}`;
+    }
+
+    _dateLabel(isoDate) {
+        const date = parseIsoDate(isoDate);
+        return date ? GLib.DateTime.new_local(date.getFullYear(), date.getMonth() + 1, date.getDate(), 0, 0, 0).format('%-d %b %Y') : isoDate;
+    }
+
+    _periodLabel() {
+        if (this._isMonthScope())
+            return this._monthLabel();
+        if (this._period === 'custom')
+            return `${this._dateLabel(this._rangeStart)} – ${this._dateLabel(this._rangeEnd)}`;
+        return this._('All time');
+    }
+
+    _updatePeriodUi() {
+        const _ = this._;
+        const monthScope = this._isMonthScope();
+        const calendar = this._stack.get_visible_child_name() === 'calendar';
+        const title = monthScope ? _('Monthly Report') : _('Time Report');
+        this.set_title(title);
+        this._windowTitle.set_title(title);
+        // The From/To buttons already show the dates of a custom range.
+        this._monthTitle.set_label(!monthScope && this._period === 'custom' ? _('Custom range') : this._periodLabel());
+        this._periodDropdown.sensitive = !calendar;
+        this._periodDropdown.set_tooltip_text(calendar ? _('The calendar always shows one month') : _('Period'));
+        this._rangeBox.visible = !calendar && this._period === 'custom';
+        this._startButton.set_label(this._dateLabel(this._rangeStart));
+        this._endButton.set_label(this._dateLabel(this._rangeEnd));
+        const totalCaption = monthScope ? _('Total this month') : _('Total');
+        this._summaryCaptions.total.set_label(totalCaption);
+        this._summaryCells.total.update_property([Gtk.AccessibleProperty.DESCRIPTION], [totalCaption]);
+        this._summaryBoxes.change.visible = monthScope;
+        this._updateMonthNavigation();
+    }
 
     _monthLabel() {
         return GLib.DateTime.new_local(this._year, this._month + 1, 1, 0, 0, 0).format('%B %Y');
@@ -878,19 +1021,22 @@ class ReportWindow extends Adw.ApplicationWindow {
     }
 
     _changeMonth(delta) {
+        if (!this._isMonthScope())
+            return;
         const date = new Date(this._year, this._month + delta, 1);
         if (this._isFuture(date.getFullYear(), date.getMonth()))
             return;
         this._year = date.getFullYear();
         this._month = date.getMonth();
-        this._monthTitle.set_label(this._monthLabel());
-        this._updateMonthNavigation();
+        this._updatePeriodUi();
         this._loadReport();
     }
 
     _updateMonthNavigation() {
+        const monthScope = this._isMonthScope();
         const next = new Date(this._year, this._month + 1, 1);
-        this._nextAction.set_enabled(!this._isFuture(next.getFullYear(), next.getMonth()));
+        this._prevAction.set_enabled(monthScope);
+        this._nextAction.set_enabled(monthScope && !this._isFuture(next.getFullYear(), next.getMonth()));
     }
 
     // ---- export ------------------------------------------------------------
@@ -900,8 +1046,8 @@ class ReportWindow extends Adw.ApplicationWindow {
         const key = FORMATS[format] ? format : 'csv';
         const options = {
             projectPath: this._project.path_with_namespace,
-            monthLabel: this._monthLabel(),
-            strings: {title: _('Monthly Time Report'), period: _('Period'), total: _('Total time'),
+            monthLabel: this._periodLabel(),
+            strings: {title: this._isMonthScope() ? _('Monthly Time Report') : _('Time Report'), period: _('Period'), total: _('Total time'),
                 byCategory: _('Summary by category'), byUser: _('Time by user and category')},
         };
         return {key, content: key === 'md' ? toMarkdown(this._reportData, options) : toCsv(this._reportData, options)};
@@ -915,7 +1061,10 @@ class ReportWindow extends Adw.ApplicationWindow {
         this._config.reportExportFormat = key;
         this._updateExportLabel();
         const downloads = GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_DOWNLOAD) || GLib.get_home_dir();
-        const filename = exportFileName(this._project.path_with_namespace, this._year, this._month, FORMATS[key].ext);
+        const path = this._project.path_with_namespace;
+        const filename = this._isMonthScope() ? exportFileName(path, this._year, this._month, FORMATS[key].ext)
+            : exportFileNameForPeriod(path, this._period === 'custom' ? `${this._rangeStart}_${this._rangeEnd}` : 'all-time',
+                FORMATS[key].ext);
         const file = Gio.File.new_for_path(GLib.build_filenamev([downloads, filename]));
         try {
             file.replace_contents(new TextEncoder().encode(content), null, false, Gio.FileCreateFlags.REPLACE_DESTINATION, null);
